@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>homePage</title>
+    <style>
+        body 
+        {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: url('homeBackground.jpg') no-repeat center center/cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container 
+        {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn 
+        {
+            from 
+            {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to 
+            {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo 
+        {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .tagline 
+        {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .input-field 
+        {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .btn 
+        {
+            background-color: #4facfe;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover 
+        {
+            background-color: #00c6ff;
+        }
+
+        .footer 
+        {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .login-link 
+        {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .login-link a 
+        {
+            color: #4facfe;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-link a:hover 
+        {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+	<form th:action="@{/main/userLogin}" method="POST" enctype="application/x-www-form-urlencoded" id="loginForm">
+        <div class="container">
+            <div class="logo">P Vault</div>
+            <div class="tagline">A reliable way of storing credentials</div>
+            <input type="text" id="username" name="username" class="input-field" placeholder="Username" oninput="storeValue()"/>
+            <input type="password" name="password" class="input-field" placeholder="Password" />
+            <input type="text" name="otp" class="input-field" placeholder="OTP"/>
+            <!-- Hidden field to store username -->
+            <input type="hidden" id="stored_username" name="hiddenField">
+            <!-- "Get OTP" Button Triggers JavaScript -->
+            <button type="button" class="btn" onclick="sendOTP()">Get OTP</button>
+            <!-- Login Button -->
+            <button type="submit" class="btn">Login</button>
+            <div class="login-link">Don't have an account? <a href="http://localhost:8080/main/getRegistration">Sign Up</a></div>
+            <div class="footer">&copy; 2025 P Vault. All rights reserved.</div>
+        </div>
+    </form>
+    <script>
+        function storeValue() 
+        {
+            let username = document.getElementById("username").value;
+            document.getElementById("stored_username").value = username;
+        }
+        function sendOTP() 
+        {
+            storeValue(); 
+            let username = document.getElementById("stored_username").value;
+            window.location.href = `http://localhost:8080/main/sendUserLoginOTP?hiddenField=${encodeURIComponent(username)}`;
+        }
+    </script>
+</body>
+</html>
+

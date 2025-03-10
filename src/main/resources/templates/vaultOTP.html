@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault OTP</title>
+    <style>
+        body 
+        {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container 
+        {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn 
+        {
+            from 
+            {
+                opacity: 0;
+                transform: translateY(0);
+            }
+            to 
+            {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+
+        .input-field 
+        {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn 
+        {
+            background-color: #4facfe;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: 10px;
+            text-decoration: none;
+        }
+
+        .btn:hover
+        {
+            background-color: #00c6ff;
+        }
+
+        .submit-btn 
+        {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <form th:action="@{/main/userVaultOTPAuth}" method="POST">
+        <div class="container">
+            <div class="input-group">
+                <input type="text" name="vOTP" class="input-field" placeholder="Enter Vault OTP" />
+                <a href="http://localhost:8080/main/sendUserVaultOTP" class="btn">Get Vault unlock OTP</a>
+            </div>
+            <div class="submit-btn">
+                <button type="submit" class="btn">Unlock Vault</button>
+            </div>
+        </div>
+    </form>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>userRegistration</title>
+    <style>
+        body 
+        {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container 
+        {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn 
+        {
+            from 
+            {
+                opacity: 0;
+                transform: translateY(0);
+            }
+            to 
+            {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo 
+        {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .tagline 
+        {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .input-field 
+        {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .btn 
+        {
+            background-color: #4facfe;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover
+        {
+            background-color: #00c6ff;
+        }
+
+        .footer 
+        {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .login-link 
+        {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .login-link a 
+        {
+            color: #4facfe;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-link a:hover 
+        {
+            text-decoration: underline;
+        }
+
+        .key-note 
+        {
+            font-size: 0.7rem;
+            color: #777;
+            margin-top: 3px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <form th:action="@{/main/userRegistration}" method="POST">
+        <div class="container">
+            <div class="logo">P Vault</div>
+            <div class="tagline">A reliable way of storing credentials</div>
+            <input type="text" name="username" class="input-field" placeholder="Enter Username" />
+            <input type="password" id="password" name="password" class="input-field" placeholder="Create Password" />
+            <input type="password" name="confirmPassword" class="input-field" placeholder="Re-enter created Password" />
+            <div id="strengthDisplay" style="font-size: 15px;">Password Strength: <span id="strengthText"> </span></div>
+            <button type="submit" class="btn">Sign Up</button>
+            <a href= "..........."><button type="submit" class="btn">Generate Master Key</button></a>
+            <div class="key-note">(The master key will be needed to restore the backed-up passwords)</div>
+            <div class="footer">&copy; 2025 P Vault. All rights reserved.</div>
+        </div>
+    </form>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+    <script>
+        document.getElementById("password").addEventListener("input", function() 
+        {
+            let passwordResult = zxcvbn(this.value);
+            let strengthText = document.getElementById("strengthText");
+            
+            if (!strengthText) return;
+
+            const strengthLevels = ["Weak", "Fair", "Good", "Strong", "Very Strong"];
+            const colors = ["red", "orange", "yellow", "green", "darkgreen"];
+
+            strengthText.textContent = strengthLevels[passwordResult.score];
+            strengthText.style.color = colors[passwordResult.score];
+        });
+    </script>
+</body>
+</html>
