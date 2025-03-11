@@ -1,13 +1,18 @@
 package com.example.PVault;
 
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,51 +104,27 @@ public class MainController
 	}
 	
 	@RequestMapping("/generateMasterKey")
-	public void generateMasterKey(HttpServletRequest request, @RequestParam("hiddenField") String username)
+	public void generateMasterKey(HttpServletRequest request, @RequestParam("hiddenField") String username) throws NoSuchAlgorithmException, 
+	                                                                                                               NoSuchPaddingException, InvalidKeyException, 
+	                                                                                                               IllegalBlockSizeException, BadPaddingException
 	{
 		request.getSession().setAttribute("username", username);
 		String masterKey = UUID.randomUUID().toString().substring(0, 16);
-	
 		
-		KeyGenerator keyGen = null;
-		try 
-		{
-			keyGen = KeyGenerator.getInstance("AES");
-		} 
+		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256);
+        SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
+        String AESEncyptionKeyForMasterKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
 		
-		catch (NoSuchAlgorithmException e) 
-		{
-			e.printStackTrace();
-		}
+        request.getSession().setAttribute("AESEncyptionKeyForMasterKey", AESEncyptionKeyForMasterKey); //Save the AES key for master key in session
 		
-	    keyGen.init(256); 
-	    SecretKey secretKey = keyGen.generateKey();
-		
-		
-	    Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(AESEncyptionKeyForMasterKey), "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);              // Encrypt Master key using AES 
         byte[] encryptedBytes = cipher.doFinal(masterKey.getBytes());
         String encryptedMasterKey = Base64.getEncoder().encodeToString(encryptedBytes);
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		passwordService.addMasterKey(username, encryptedMasterKey);   // Save it to DB
 		
 		String toEmail = username;
 		String mailSubject = "Master Key for password backup";
@@ -160,14 +141,6 @@ public class MainController
 			e.printStackTrace();
 		}
 	}
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	@PostMapping("/addWebsitePassword")
 	public String addWebsitePassword(@ModelAttribute Password websiteDetailsFormData, HttpServletRequest request)

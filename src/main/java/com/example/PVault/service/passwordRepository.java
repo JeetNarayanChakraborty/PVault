@@ -20,8 +20,11 @@ public interface passwordRepository extends JpaRepository<Password, String>
     @Query(value = "SELECT Id, domainname, password FROM passwords WHERE username = :username", nativeQuery = true)
     List<Object[]> findWebsiteAndPasswordByUsername(@Param("username") String username);
     
-    @Query(value = "INSERT INTO password_backup VALUES (userId, backup)", nativeQuery = true)
+    @Query(value = "INSERT INTO password_backup VALUES (userID, backup)", nativeQuery = true)
     void addBackup(@Param("userID") String userID, @Param("backup") String backup);
+    
+    @Query(value = "INSERT INTO secureKeys VALUES (username, masterKey)", nativeQuery = true)
+    void addMasterKey(@Param("username") String username, @Param("masterKey") String masterKey);
     
 	void deleteById(String ID);
 }
