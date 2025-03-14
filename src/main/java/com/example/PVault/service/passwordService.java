@@ -48,6 +48,11 @@ public class passwordService
     {
     	PasswordRepository.addMasterKey(username, masterKey);
     }
+    
+    public String getMasterKey(String username)
+    {
+    	return PasswordRepository.getMasterKeyByUsername(username);
+    }
 }
 
 

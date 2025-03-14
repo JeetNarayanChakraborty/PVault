@@ -1,5 +1,7 @@
 package com.example.PVault.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
@@ -8,14 +10,11 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.example.PVault.entityClasses.User;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jakarta.mail.MessagingException;
 
 
@@ -31,6 +30,9 @@ public class BackupAndRestoreService
 	
 	@Autowired
 	UserService userService;
+	
+	@Autowired
+	KeyManagementService keyManagementService;
 
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 	
@@ -39,11 +41,14 @@ public class BackupAndRestoreService
 	{
 		SecretKey secretKey = null;
 		
-		try 
-		{
-			secretKey = KeyGenerator.getInstance("AES").generateKey();
-			
-		} catch(NoSuchAlgorithmException e) {} 
+		String masterkey = KeyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
+		
+		MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
+        secretKey = new SecretKeySpec(keyBytes, "AES");    // Derive AES key from master key
+	
+        
+        
 		
 		List<Object[]> res = passwordService.getWebsiteAndPassword(username);
 		HashMap<String, pwd> pwdDetails = new HashMap<String, pwd>();
@@ -109,9 +114,17 @@ public class BackupAndRestoreService
 	
 	
 	
-	public void restoreUserSavedPasswords(String username, String masterKeyDecryptionAESKey)
+	public void restoreUserSavedPasswords(String username)
 	{
 		 //TODO
+		
+		SecretKey secretKey = null;
+		
+		String masterkey = KeyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
+		
+		MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
+        secretKey = new SecretKeySpec(keyBytes, "AES");    // Derive AES key from master key
 		
 		
 		
