@@ -26,5 +26,8 @@ public interface passwordRepository extends JpaRepository<Password, String>
     @Query(value = "INSERT INTO secureKeys VALUES (username, masterKey)", nativeQuery = true)
     void addMasterKey(@Param("username") String username, @Param("masterKey") String masterKey);
     
+    @Query(value = "SELECT master_key WHERE username = :username", nativeQuery = true)
+    String getMasterKeyByUsername(@Param("username") String username);
+    
 	void deleteById(String ID);
 }

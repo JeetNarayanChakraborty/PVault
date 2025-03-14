@@ -130,7 +130,7 @@ public class MainController
 		String mailSubject = "Master Key for password backup";
 		String mailBody = "Hi " + username
 				          + "/n/n"
-				          + "Master key is generate and securely stored";
+				          + "Master key is generated and securely stored";
 				         
 		try 
 		{
@@ -209,6 +209,40 @@ public class MainController
 		model.addAttribute("passwordList", passwordList);  // Add the list to the model
         return "viewPasswords";
 	}
+	
+	
+	
+	
+	
+	
+	
+	@RequestMapping("/restoreDeletedPasswords")
+	public void restoreDeletedPasswords()
+	{
+		//TODO
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	@RequestMapping("/sendOTP")
 	public String sendOTP(HttpServletRequest request)
