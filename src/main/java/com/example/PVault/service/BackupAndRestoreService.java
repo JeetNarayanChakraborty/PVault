@@ -4,9 +4,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -17,6 +20,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,64 +109,66 @@ public class BackupAndRestoreService
         cipher.init(Cipher.ENCRYPT_MODE, key);
         return Base64.getEncoder().encodeToString(cipher.doFinal(json.getBytes()));
     }
+
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	public void restoreUserSavedPasswords(String username) throws InvalidKeyException, IllegalBlockSizeException, 
-	                                                              BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
+	public void restoreUserSavedPasswords(String username) throws Exception
 	{
-		 //TODO
+		HashMap<String, pwd> allLastSevenWeeksUserPasswords = new HashMap<String, pwd>(); // Stores all past seven weeks of user password backup
+		ArrayList<String> userCurrentPasswordIDs = new ArrayList<String>(); // Stores user's current password Ids
 		
 		SecretKey secretKey = null;
-		
+		User u = userService.getUser(username);
 		String masterkey = KeyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
 		
 		MessageDigest sha = MessageDigest.getInstance("SHA-256");
         byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
         secretKey = new SecretKeySpec(keyBytes, "AES");    // Derive AES key from master key
 		
+        List<String> encryptedUserBackups = passwordService.getUserBackUp(u.getId());
+        
+        for(String userBackup : encryptedUserBackups)
+        {
+        	HashMap<String, pwd> temp = decryptMap(userBackup, secretKey);
+        	
+        	for(Entry<String, pwd> map : temp.entrySet()) 
+        	{
+                String key = map.getKey();
+                pwd value = map.getValue();
+                
+                if(!allLastSevenWeeksUserPasswords.containsKey(key))
+                {
+                	allLastSevenWeeksUserPasswords.put(key, value);
+                }
+        	}
+        }
+        
+        List<Password> temp = passwordService.getAllPasswords(username);
+        
+        for(Password pwd : temp)
+        {
+        	userCurrentPasswordIDs.add(pwd.getId());
+        }
+        
+        for(String ID : userCurrentPasswordIDs)
+        {
+        	if(allLastSevenWeeksUserPasswords.containsKey(ID)) // Compares user's current passwords with all past seven weeks passwords
+        	{
+        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all password store, those who remains are deleted before
+        	}
+        }
+        
+        
+        
+        
+        
+        
+        
 		
 		
 		
 		
-		
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	}	
 
 
     // Decrypt HashMap

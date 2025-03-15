@@ -44,9 +44,9 @@ public class passwordService
     	PasswordRepository.addBackup(userID, backup);
     }
     
-    public List<String> gteUserBackUp(String userID)
+    public List<String> getUserBackUp(String userID)
     {
-    	PasswordRepository
+    	return PasswordRepository.getBackup(userID);
     }
     
     public void addMasterKey(String username, String masterKey)
