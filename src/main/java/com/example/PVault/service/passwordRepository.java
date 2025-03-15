@@ -23,11 +23,15 @@ public interface passwordRepository extends JpaRepository<Password, String>
     @Query(value = "INSERT INTO password_backup VALUES (userID, backup)", nativeQuery = true)
     void addBackup(@Param("userID") String userID, @Param("backup") String backup);
     
+    @Query(value = "SELECT backup FROM password_backup WHERE ID = :userID", nativeQuery = true)
+    void getBackup(@Param("userID") String userID);
+    
     @Query(value = "INSERT INTO secureKeys VALUES (username, masterKey)", nativeQuery = true)
     void addMasterKey(@Param("username") String username, @Param("masterKey") String masterKey);
     
     @Query(value = "SELECT master_key WHERE username = :username", nativeQuery = true)
     String getMasterKeyByUsername(@Param("username") String username);
+    
     
 	void deleteById(String ID);
 }

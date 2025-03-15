@@ -1,13 +1,18 @@
 package com.example.PVault.service;
 
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +42,8 @@ public class BackupAndRestoreService
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 	
 	
-	public void backupUserSavedPasswords(String username)
+	public void backupUserSavedPasswords(String username) throws InvalidKeyException, IllegalBlockSizeException, 
+																 BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
 		SecretKey secretKey = null;
 		
@@ -47,9 +53,7 @@ public class BackupAndRestoreService
         byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
         secretKey = new SecretKeySpec(keyBytes, "AES");    // Derive AES key from master key
 	
-        
-        
-		
+  
 		List<Object[]> res = passwordService.getWebsiteAndPassword(username);
 		HashMap<String, pwd> pwdDetails = new HashMap<String, pwd>();
 		
@@ -114,7 +118,8 @@ public class BackupAndRestoreService
 	
 	
 	
-	public void restoreUserSavedPasswords(String username)
+	public void restoreUserSavedPasswords(String username) throws InvalidKeyException, IllegalBlockSizeException, 
+	                                                              BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
 		 //TODO
 		

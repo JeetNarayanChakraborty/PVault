@@ -44,6 +44,11 @@ public class passwordService
     	PasswordRepository.addBackup(userID, backup);
     }
     
+    public List<String> gteUserBackUp(String userID)
+    {
+    	PasswordRepository
+    }
+    
     public void addMasterKey(String username, String masterKey)
     {
     	PasswordRepository.addMasterKey(username, masterKey);

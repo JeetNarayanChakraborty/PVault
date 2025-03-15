@@ -17,8 +17,8 @@ import jakarta.servlet.http.HttpSession;
 @Service
 public class KeyManagementService 
 {
-	private final HttpSession session;
-	passwordService passwordService;
+	private static HttpSession session;
+	static passwordService passwordService;
 	
 
     public KeyManagementService(HttpSession session) 
@@ -26,7 +26,7 @@ public class KeyManagementService
         this.session = session;
     }
 	
-	public String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
+	public static String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 	                                                        BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
 		String keytoDecryptMasterKey = (String) session.getAttribute("AESEncyptionKeyForMasterKey");
