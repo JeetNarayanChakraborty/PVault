@@ -110,12 +110,11 @@ public class BackupAndRestoreService
         return Base64.getEncoder().encodeToString(cipher.doFinal(json.getBytes()));
     }
 
-	
-	
-	public void restoreUserSavedPasswords(String username) throws Exception
+	public List<Password> restoreUserSavedPasswords(String username) throws Exception
 	{
 		HashMap<String, pwd> allLastSevenWeeksUserPasswords = new HashMap<String, pwd>(); // Stores all past seven weeks of user password backup
 		ArrayList<String> userCurrentPasswordIDs = new ArrayList<String>(); // Stores user's current password Ids
+		List<Password> userDeletedPasswords = new ArrayList<Password>(); // Stores the end result of the deleted user passwords
 		
 		SecretKey secretKey = null;
 		User u = userService.getUser(username);
@@ -154,20 +153,17 @@ public class BackupAndRestoreService
         {
         	if(allLastSevenWeeksUserPasswords.containsKey(ID)) // Compares user's current passwords with all past seven weeks passwords
         	{
-        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all password store, those who remains are deleted before
+        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all-password store, those who remains are deleted before
         	}
         }
+           
+        for(Entry<String, pwd> map : allLastSevenWeeksUserPasswords.entrySet()) 
+    	{
+            String passwordID = map.getKey();
+            userDeletedPasswords.add(passwordService.getPasswordByID(passwordID));
+    	}
         
-        
-        
-        
-        
-        
-        
-		
-		
-		
-		
+        return userDeletedPasswords;
 	}	
 
 
@@ -180,8 +176,6 @@ public class BackupAndRestoreService
 	    return objectMapper.readValue(json, new TypeReference<HashMap<String, pwd>>() {}); // Convert JSON back to HashMap
 	}
 }
-
-
 
 
 

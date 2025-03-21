@@ -2,6 +2,7 @@ package com.example.PVault;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
+import com.example.PVault.service.BackupAndRestoreService;
 import com.example.PVault.service.MailService;
 import com.example.PVault.service.UserService;
 import com.example.PVault.service.passwordService;
@@ -53,6 +55,9 @@ public class MainController
 	
 	@Autowired
 	MailService mailService;
+	
+	@Autowired
+	BackupAndRestoreService backupAndRestoreService;
 	
 	
 	
@@ -210,16 +215,20 @@ public class MainController
         return "viewPasswords";
 	}
 	
-	
-	
-	
-	
-	
-	
-	@RequestMapping("/restoreDeletedPasswords")
-	public void restoreDeletedPasswords()
+	@RequestMapping("/viewDeletedPasswords")
+	public String viewDeletedPasswords(Model model, HttpServletRequest request)
 	{
-		//TODO
+		String username = (String) request.getSession().getAttribute("username");
+		List<Password> userDeletedPasswords = new ArrayList<Password>();
+		
+		try 
+		{
+			userDeletedPasswords = backupAndRestoreService.restoreUserSavedPasswords(username);
+		} 
+		catch (Exception e) { e.printStackTrace(); }
+		
+		model.addAttribute("deletedPasswordList", userDeletedPasswords);
+		return "restorePassword";
 	}
 	
 	

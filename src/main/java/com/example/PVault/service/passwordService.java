@@ -16,6 +16,11 @@ public class passwordService
 	{
 		PasswordRepository.save(password); // Save password
     }
+	
+	public Password getPasswordByID(String ID)
+	{
+		return PasswordRepository.findPasswordDetailsById(ID);
+	}
     
     public List<Password> getAllPasswords(String username)
     {

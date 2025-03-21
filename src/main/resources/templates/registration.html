@@ -130,12 +130,13 @@
         <div class="container">
             <div class="logo">P Vault</div>
             <div class="tagline">A reliable way of storing credentials</div>
-            <input type="text" name="username" class="input-field" placeholder="Enter Username" />
+            <input type="text" name="username" class="input-field" placeholder="Enter Username" oninput="storeValue()"/>
+            <input type="hidden" id="stored_username" name="hiddenField">
             <input type="password" id="password" name="password" class="input-field" placeholder="Create Password" />
             <input type="password" name="confirmPassword" class="input-field" placeholder="Re-enter created Password" />
             <div id="strengthDisplay" style="font-size: 15px;">Password Strength: <span id="strengthText"> </span></div>
             <button type="submit" class="btn">Sign Up</button>
-            <a href= "..........."><button type="submit" class="btn">Generate Master Key</button></a>
+            <button type="button" class="btn" onclick="generateMasterKey()">Generate Master Key</button>
             <div class="key-note">(The master key will be needed to restore the backed-up passwords)</div>
             <div class="footer">&copy; 2025 P Vault. All rights reserved.</div>
         </div>
@@ -156,6 +157,19 @@
             strengthText.textContent = strengthLevels[passwordResult.score];
             strengthText.style.color = colors[passwordResult.score];
         });
+
+        function storeValue() 
+        {
+            let username = document.getElementById("username").value;
+            document.getElementById("stored_username").value = username;
+        }
+
+        function generateMasterKey() 
+        {
+            storeValue(); 
+            let username = document.getElementById("stored_username").value;
+            window.location.href = `http://localhost:8080/main/generateMasterKey?hiddenField=${encodeURIComponent(username)}`;
+        }
     </script>
 </body>
 </html>
