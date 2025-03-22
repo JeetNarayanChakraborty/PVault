@@ -1,7 +1,14 @@
 package com.example.PVault.service;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -79,7 +86,16 @@ public class BackgroundService
 	{
 		String userID = (String) session.getAttribute("userID");
 		User u = userService.getUserById(userID);
-        backupAndRestoreService.backupUserSavedPasswords(u.getUsername());
+        try 
+        {
+			backupAndRestoreService.backupUserSavedPasswords(u.getUsername());
+		} 
+        
+        catch(InvalidKeyException e) {e.printStackTrace();} 
+        catch(IllegalBlockSizeException e) {e.printStackTrace();} 
+        catch(BadPaddingException e) {} 
+        catch(NoSuchAlgorithmException e) {e.printStackTrace();} 
+        catch(NoSuchPaddingException e) {e.printStackTrace();}
     }
 }
 

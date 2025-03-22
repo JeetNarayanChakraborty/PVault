@@ -32,6 +32,7 @@ import com.example.PVault.service.UserService;
 import com.example.PVault.service.passwordService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import security.AuthenticationService;
 import security.OTPService;
 
@@ -114,7 +115,7 @@ public class MainController
 	                                                                                                               IllegalBlockSizeException, BadPaddingException
 	{
 		request.getSession().setAttribute("username", username);
-		String masterKey = UUID.randomUUID().toString().substring(0, 16);
+		String masterKey = UUID.randomUUID().toString().substring(0, 16); // Generate Master key
 		
 		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
         keyGen.init(256);
@@ -174,8 +175,7 @@ public class MainController
 	}
 	
 	@PostMapping("/deletePassword")
-	public String deletePassword(@RequestParam(name = "password_id") String Id, 
-			                        HttpServletRequest request)
+	public String deletePassword(@RequestParam(name = "password_id") String Id)
 	{
 		passwordService.deletePassword(Id);
 		return "mainPage";
@@ -228,30 +228,14 @@ public class MainController
 		catch (Exception e) { e.printStackTrace(); }
 		
 		model.addAttribute("deletedPasswordList", userDeletedPasswords);
-		return "restorePassword";
+		return "restoredPasswords";
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	@RequestMapping("/restorePassword")
+	public void restorePassword(@RequestParam(name = "password") Password userPassword)
+	{
+		passwordService.addPassword(userPassword);
+	}
 	
 	@RequestMapping("/sendOTP")
 	public String sendOTP(HttpServletRequest request)
@@ -273,7 +257,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/sendUserLoginOTP")
-	public String sendUserLoginOTP(HttpServletRequest request, @RequestParam("hiddenField") String username)
+	public void sendUserLoginOTP(HttpServletRequest request, @RequestParam("hiddenField") String username)
 	{
 		String userOTP = otpService.generateOTP();
 		request.getSession().setAttribute("OTP", userOTP);
@@ -287,8 +271,6 @@ public class MainController
 		{
 			e.printStackTrace();
 		}
-		
-		return "homePage";
 	}	
 	
 	@PostMapping("/userLogin")
@@ -300,13 +282,21 @@ public class MainController
 		
 		String inputPassword = userLoginFormData.getPassword();
 		String storedPassword = u.getPassword();
-		request.getSession().setAttribute("username", u.getUsername());
 		String sentOTP = (String) request.getSession().getAttribute("OTP");
 		String enteredOTP = otp;
 		
-		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP))
+		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP) 
+		&& request.getSession().getAttribute("username") == null)
 		{
+			request.getSession().setAttribute("username", u.getUsername());
 			return "vaultOTP";
+		}
+		
+		else if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP) 
+		&& request.getSession().getAttribute("username") != null)
+		{
+			
+			return "mainPage";
 		}
 		
 		else
@@ -315,8 +305,20 @@ public class MainController
 		}
 	}
 	
+	@RequestMapping("/userLogout")
+	public String userLogout(HttpServletRequest request)
+	{
+		HttpSession session = request.getSession(false); // Get existing session
+		
+	    if(session != null) 
+	    {
+	        session.invalidate(); // Invalidate the session
+	    }
+	    return "redirect:/homePage";		
+	}
+	
 	@RequestMapping("/sendUserVaultOTP")
-	public String sendUserVaultOTP(HttpServletRequest request)
+	public void sendUserVaultOTP(HttpServletRequest request)
 	{
 		String userOTP = otpService.generateOTP();
 		request.getSession().setAttribute("VaultOTP", userOTP);
@@ -330,8 +332,6 @@ public class MainController
 		{
 			e.printStackTrace();
 		}
-		
-		return "vaultOTP";
 	}
 	
 	@PostMapping("/userVaultOTPAuth")
