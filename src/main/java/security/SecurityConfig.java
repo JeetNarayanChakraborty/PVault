@@ -1,5 +1,7 @@
 package security;
 
+import javax.sql.DataSource;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
 
 
@@ -15,10 +19,26 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig
 {
+	private final DataSource dataSource;
+    
+	
+    public SecurityConfig(DataSource dataSource) 
+    {
+        this.dataSource = dataSource;
+    }
+	
     @Bean
     public PasswordEncoder passwordEncoder() 
     {
         return new BCryptPasswordEncoder();
+    }
+    
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository() 
+    {
+        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setDataSource(dataSource);
+        return tokenRepository;
     }
     
     @Bean
@@ -29,8 +49,16 @@ public class SecurityConfig
             .authorizeHttpRequests(authz -> authz
                 .anyRequest().permitAll()
             )
-            .formLogin(AbstractHttpConfigurer::disable)  // Disable form login
-            .httpBasic(AbstractHttpConfigurer::disable); // Disable HTTP Basic
+            .sessionManagement(session -> session
+                    .invalidSessionUrl("/getHome?sessionExpired=true") // Redirect on session timeout
+            )
+            .formLogin(AbstractHttpConfigurer::disable)  
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .rememberMe(remember -> remember
+                    .tokenRepository(persistentTokenRepository())
+                    .tokenValiditySeconds(2592000) // 30 day
+                    .rememberMeParameter("remember-me") 
+            );
 
         return http.build();
     }

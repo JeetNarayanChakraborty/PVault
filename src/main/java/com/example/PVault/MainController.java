@@ -17,6 +17,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,7 +68,9 @@ public class MainController
 	@GetMapping("/getHome")
 	public String getHome(HttpServletRequest request)
 	{
-		if(request.getSession().getAttribute("username") != null)
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		
+		if(auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) 
 		{
 			return "mainPage";
 		}
@@ -285,18 +290,10 @@ public class MainController
 		String sentOTP = (String) request.getSession().getAttribute("OTP");
 		String enteredOTP = otp;
 		
-		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP) 
-		&& request.getSession().getAttribute("username") == null)
+		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP))
 		{
 			request.getSession().setAttribute("username", u.getUsername());
 			return "vaultOTP";
-		}
-		
-		else if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP) 
-		&& request.getSession().getAttribute("username") != null)
-		{
-			
-			return "mainPage";
 		}
 		
 		else

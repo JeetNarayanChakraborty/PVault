@@ -115,6 +115,19 @@
         {
             text-decoration: underline;
         }
+
+         .checkbox-container 
+         {
+            display: flex;
+            align-items: center;
+            justify-content: start;
+            margin-bottom: 10px;
+        }
+        .checkbox-container label 
+        {
+            margin-left: 5px;
+            font-size: 0.89rem;
+        }
     </style>
 </head>
 <body>
@@ -125,6 +138,10 @@
             <input type="text" id="username" name="username" class="input-field" placeholder="Username" oninput="storeValue()"/>
             <input type="password" name="password" class="input-field" placeholder="Password" />
             <input type="text" name="otp" class="input-field" placeholder="OTP"/>
+            <div class="checkbox-container">
+                <input type="checkbox" id="remember-me">
+                <label for="remember-me">Remember Me</label>
+            </div>
             <!-- Hidden field to store username -->
             <input type="hidden" id="stored_username" name="hiddenField">
             <!-- "Get OTP" Button Triggers JavaScript -->
@@ -147,6 +164,15 @@
             let username = document.getElementById("stored_username").value;
             window.location.href = `http://localhost:8080/main/sendUserLoginOTP?hiddenField=${encodeURIComponent(username)}`;
         }
+
+        document.addEventListener("DOMContentLoaded", function () 
+        {
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has("sessionExpired")) 
+        {
+            alert("Your session expired due to inactivity. Please log in again.");
+        }
+    });
     </script>
 </body>
 </html>
