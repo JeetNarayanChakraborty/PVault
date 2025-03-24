@@ -17,6 +17,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +40,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import security.AuthenticationService;
 import security.OTPService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 
 
@@ -97,6 +100,7 @@ public class MainController
 	}
 	
 	@PostMapping("/userRegistration")
+	@CircuitBreaker(name = "userRegistrationCB", fallbackMethod = "userRegistrationFallback")
 	public String userRegistration(@ModelAttribute User registrationFormData, HttpServletRequest request)
 	{
 		//Take password input
@@ -112,6 +116,13 @@ public class MainController
 		//Add to Database
 		userService.addUser(registrationFormData);
 		return "mainPage";
+	}
+	
+	public ResponseEntity<String> userRegistrationFallback(User registrationFormData, 
+			                                               HttpServletRequest request, Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later. :)");
 	}
 	
 	@RequestMapping("/generateMasterKey")
@@ -262,6 +273,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/sendUserLoginOTP")
+	@CircuitBreaker(name = "sendUserLoginOTPCB", fallbackMethod = "sendUserLoginOTPFallback")
 	public void sendUserLoginOTP(HttpServletRequest request, @RequestParam("hiddenField") String username)
 	{
 		String userOTP = otpService.generateOTP();
@@ -276,9 +288,16 @@ public class MainController
 		{
 			e.printStackTrace();
 		}
-	}	
+	}
+	
+	public ResponseEntity<String> sendUserLoginOTPFallback(HttpServletRequest request, String username, Throwable t) 
+	{
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+				body("Service is temporarily unavailable. Please try again later. :)");
+	}
 	
 	@PostMapping("/userLogin")
+	@CircuitBreaker(name = "userLoginCB", fallbackMethod = "userLoginFallback")
 	public String userLogin(@ModelAttribute User userLoginFormData, HttpServletRequest request, 
 			                @RequestParam("otp") String otp)
 	{
@@ -301,6 +320,13 @@ public class MainController
 			return "homePage";
 		}
 	}
+	
+	public ResponseEntity<String> userLoginFallback(User userLoginFormData, 
+            										HttpServletRequest request, String otp, Throwable t) 
+		{
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+					body("Service is temporarily unavailable. Please try again later. :)");
+		}
 	
 	@RequestMapping("/userLogout")
 	public String userLogout(HttpServletRequest request)
