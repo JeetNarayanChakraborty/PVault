@@ -325,7 +325,7 @@ public class MainController
             										HttpServletRequest request, String otp, Throwable t) 
 		{
 			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
-					body("Service is temporarily unavailable. Please try again later. :)");
+					body("Service is temporarily unavailable. Please try again later. :)");  //Fallback method
 		}
 	
 	@RequestMapping("/userLogout")
