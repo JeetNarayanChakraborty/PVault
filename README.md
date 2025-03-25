@@ -6,7 +6,6 @@ PVault is a secure and efficient password management application designed to hel
 
 - **Secure Storage**: Passwords are encrypted and stored securely to prevent unauthorized access.
 - **User-Friendly Interface**: Intuitive design for easy navigation and management of your passwords.
-- **Cross-Platform Compatibility**: Accessible on multiple platforms, ensuring you have access to your passwords wherever you go.
 
 ## Installation
 
