@@ -388,7 +388,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/sendUserVaultOTP")
-	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback")
+	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback")   //Circuit breaker
 	public void sendUserVaultOTP(HttpServletRequest request)
 	{
 		String userOTP = otpService.generateOTP();
