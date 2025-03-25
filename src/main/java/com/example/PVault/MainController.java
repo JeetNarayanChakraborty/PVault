@@ -126,6 +126,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/generateMasterKey")
+	@CircuitBreaker(name = "generateMasterKeyCB", fallbackMethod = "generateMasterKeyFallback")
 	public void generateMasterKey(HttpServletRequest request, @RequestParam("hiddenField") String username) throws NoSuchAlgorithmException, 
 	                                                                                                               NoSuchPaddingException, InvalidKeyException, 
 	                                                                                                               IllegalBlockSizeException, BadPaddingException
@@ -164,13 +165,28 @@ public class MainController
 		}
 	}
 	
+	public ResponseEntity<String> generateMasterKeyFallback(User registrationFormData, String username, 
+															Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later.");
+	}
+	
 	@PostMapping("/addWebsitePassword")
+	@CircuitBreaker(name = "addWebsitePasswordCB", fallbackMethod = "addWebsitePasswordFallback")
 	public String addWebsitePassword(@ModelAttribute Password websiteDetailsFormData, HttpServletRequest request)
 	{
 		String username = (String) request.getSession().getAttribute("username");
 		websiteDetailsFormData.setUsername(username);
 		passwordService.addPassword(websiteDetailsFormData);
 		return "mainPage";
+	}
+	
+	public ResponseEntity<String> addWebsitePasswordFallback(Password websiteDetailsFormData, 
+														   HttpServletRequest request, Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
 	@PostMapping("/handlePasswordIdToEdit")
@@ -182,6 +198,7 @@ public class MainController
 	}
 	
 	@PostMapping("/editWebsitePassword")
+	@CircuitBreaker(name = "editWebsitePasswordCB", fallbackMethod = "editWebsitePasswordFallback")
 	public String editWebsitePassword(@ModelAttribute Password passwordDetails, HttpServletRequest request)
 	{
 		String passwordId = (String) request.getSession().getAttribute("ID");
@@ -190,12 +207,26 @@ public class MainController
 		return "mainPage";
 	}
 	
+	public ResponseEntity<String> editWebsitePasswordFallback(Password passwordDetails, 
+			   						                         HttpServletRequest request, Throwable t) 
+	{
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+				body("Service is temporarily unavailable. Please try again later.");
+	}
+
 	@PostMapping("/deletePassword")
+	@CircuitBreaker(name = "deletePasswordCB", fallbackMethod = "deletePasswordFallback")
 	public String deletePassword(@RequestParam(name = "password_id") String Id)
 	{
 		passwordService.deletePassword(Id);
 		return "mainPage";
-	}	
+	}
+	
+	public ResponseEntity<String> deletePasswordFallback(String Id, Throwable t) 
+	{
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+				body("Service is temporarily unavailable. Please try again later.");
+	}
 	
 	@RequestMapping("/loginPasswordAutoChange")
 	public void loginPasswordAutoChange(HttpServletRequest request)
@@ -223,12 +254,20 @@ public class MainController
 	}
 	
 	@GetMapping("/viewSavedPasswords")
+	@CircuitBreaker(name = "viewSavedPasswordsCB", fallbackMethod = "viewSavedPasswordsFallback")
 	public String viewSavedPasswords(Model model, HttpServletRequest request)
 	{
 		String username = (String) request.getSession().getAttribute("username");
 		List<Password> passwordList = passwordService.getAllPasswords(username);
 		model.addAttribute("passwordList", passwordList);  // Add the list to the model
         return "viewPasswords";
+	}
+	
+	public ResponseEntity<String> viewSavedPasswordsFallback(Model model, HttpServletRequest request, 
+			                                                 Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
 	@RequestMapping("/viewDeletedPasswords")
@@ -254,6 +293,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/sendOTP")
+	@CircuitBreaker(name = "sendOTPCB", fallbackMethod = "sendOTPFallback")
 	public String sendOTP(HttpServletRequest request)
 	{
 		String userOTP = otpService.generateOTP();
@@ -270,6 +310,13 @@ public class MainController
 		}
 		
 		return "homePage";
+	}
+	
+	public ResponseEntity<String> sendOTPFallback(User registrationFormData, HttpServletRequest request, 
+			                                      Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
 	@RequestMapping("/sendUserLoginOTP")
@@ -341,6 +388,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/sendUserVaultOTP")
+	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback")
 	public void sendUserVaultOTP(HttpServletRequest request)
 	{
 		String userOTP = otpService.generateOTP();
@@ -355,6 +403,12 @@ public class MainController
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	public ResponseEntity<String> sendUserVaultOTPFallback(HttpServletRequest request, Throwable t) 
+	{
+	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
 	@PostMapping("/userVaultOTPAuth")
