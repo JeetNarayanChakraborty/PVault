@@ -45,4 +45,60 @@ Once the application is running:
 - **View Stored Passwords**: Access the 'View Passwords' section to see all your stored credentials.
 - **Delete a Password**: In the 'View Passwords' section, select the password you wish to delete and confirm your action.
 
+## Scalability & Resiliency Enhancements
+
+### 1. Circuit Breaker Implementation (Resilience4J)
+To prevent cascading failures, PVault uses Resilience4J's Circuit Breaker to handle failures gracefully. If a service fails, the circuit breaker prevents additional calls, allowing time for recovery.
+
+**Implementation:**
+```java
+@CircuitBreaker(name = "passwordService", fallbackMethod = "fallbackRetrievePassword")
+public String retrievePassword(String userId) {
+    return passwordRepository.findByUserId(userId);
+}
+
+public String fallbackRetrievePassword(String userId, Throwable t) {
+    return "Service temporarily unavailable. Please try again later.";
+}
+```
+
+### 2. Asynchronous Processing with Message Queues
+To improve scalability, operations such as password encryption and database writes are handled asynchronously using RabbitMQ.
+
+**Implementation:**
+```java
+@Autowired
+private RabbitTemplate rabbitTemplate;
+
+public void savePasswordAsync(Password password) {
+    rabbitTemplate.convertAndSend("passwordQueue", password);
+}
+
+@RabbitListener(queues = "passwordQueue")
+public void processPassword(Password password) {
+    passwordRepository.save(password);
+}
+```
+
+### 3. Load Balancer using NGINX
+To distribute traffic efficiently across multiple instances of PVault, NGINX is used as a load balancer.
+
+**Implementation (nginx.conf):**
+```nginx
+http {
+    upstream pvault_backend {
+        server backend1.example.com;
+        server backend2.example.com;
+    }
+    
+    server {
+        listen 80;
+        location / {
+            proxy_pass http://pvault_backend;
+        }
+    }
+}
+```
+
 For any questions or support, please open an issue in this repository.
+
