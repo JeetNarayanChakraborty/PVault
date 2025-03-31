@@ -19,6 +19,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -99,10 +100,15 @@ public class MainController
 		return "mainPage";
 	}
 	
-	@PostMapping("/userRegistration")
 	@CircuitBreaker(name = "userRegistrationCB", fallbackMethod = "userRegistrationFallback")
-	public String userRegistration(@ModelAttribute User registrationFormData, HttpServletRequest request)
+	@KafkaListener(topics = "user-registration-event", groupId = "user-group")
+	public void userRegistration(User registrationFormData, HttpServletRequest request)
 	{
+		//check received event
+		System.out.println("Received user details from user event producer: " + registrationFormData);
+		
+		
+		
 		//Take password input
 		String inputPassword = registrationFormData.getPassword();
 		
@@ -115,7 +121,6 @@ public class MainController
 			
 		//Add to Database
 		userService.addUser(registrationFormData);
-		return "mainPage";
 	}
 	
 	public ResponseEntity<String> userRegistrationFallback(User registrationFormData, 
@@ -172,9 +177,9 @@ public class MainController
 	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
-	@PostMapping("/addWebsitePassword")
 	@CircuitBreaker(name = "addWebsitePasswordCB", fallbackMethod = "addWebsitePasswordFallback")
-	public String addWebsitePassword(@ModelAttribute Password websiteDetailsFormData, HttpServletRequest request)
+	@KafkaListener(topics = "add-website-password-event", groupId = "user-group")
+	public String addWebsitePassword(Password websiteDetailsFormData, HttpServletRequest request)
 	{
 		String username = (String) request.getSession().getAttribute("username");
 		websiteDetailsFormData.setUsername(username);
@@ -270,9 +275,14 @@ public class MainController
 	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
-	@RequestMapping("/viewDeletedPasswords")
-	public String viewDeletedPasswords(Model model, HttpServletRequest request)
+	@KafkaListener(topics = "view-deleted-passwords-event", groupId = "user-group")
+	public String viewDeletedPasswords(Model model, HttpServletRequest request, String event)
 	{
+		System.out.println("Received event from deleted passwords event producer: " + event);
+		
+		
+		
+		
 		String username = (String) request.getSession().getAttribute("username");
 		List<Password> userDeletedPasswords = new ArrayList<Password>();
 		
@@ -286,9 +296,13 @@ public class MainController
 		return "restoredPasswords";
 	}
 	
-	@RequestMapping("/restorePassword")
-	public void restorePassword(@RequestParam(name = "password") Password userPassword)
+	@KafkaListener(topics = "restore-password-event", groupId = "user-group")
+	public void restorePassword(Password userPassword)
 	{
+		System.out.println("Received event from restore password event producer: " + userPassword);
+		
+		
+		
 		passwordService.addPassword(userPassword);
 	}
 	
