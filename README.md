@@ -6,6 +6,7 @@ PVault is a secure and efficient password management application designed to hel
 
 - **Secure Storage**: Passwords are encrypted and stored securely to prevent unauthorized access.
 - **User-Friendly Interface**: Intuitive design for easy navigation and management of your passwords.
+- **Two-Factor Authentication using OTP**: Enhances security by requiring an additional verification step.
 
 ## Installation
 
@@ -44,6 +45,7 @@ Once the application is running:
 - **Add a New Password**: Navigate to the 'Add Password' section and enter the required details.
 - **View Stored Passwords**: Access the 'View Passwords' section to see all your stored credentials.
 - **Delete a Password**: In the 'View Passwords' section, select the password you wish to delete and confirm your action.
+- **Restore Deleted Password**: Recover accidentally deleted passwords from the restore section.
 
 ## Scalability & Resiliency Enhancements
 
@@ -63,18 +65,18 @@ public String fallbackRetrievePassword(String userId, Throwable t) {
 ```
 
 ### 2. Asynchronous Processing with Message Queues
-To improve scalability, operations such as password encryption and database writes are handled asynchronously using RabbitMQ.
+To improve scalability, operations such as password encryption and database writes are handled asynchronously using Apache Kafka.
 
 **Implementation:**
 ```java
 @Autowired
-private RabbitTemplate rabbitTemplate;
+private KafkaTemplate<String, Password> kafkaTemplate;
 
 public void savePasswordAsync(Password password) {
-    rabbitTemplate.convertAndSend("passwordQueue", password);
+    kafkaTemplate.send("passwordTopic", password);
 }
 
-@RabbitListener(queues = "passwordQueue")
+@KafkaListener(topics = "passwordTopic", groupId = "passwordGroup")
 public void processPassword(Password password) {
     passwordRepository.save(password);
 }
