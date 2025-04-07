@@ -13,7 +13,6 @@ public class AuthenticationService
 	
 	public String encrypt(String password) 
 	{
-        // Hash the password before saving it to the database
         return passwordEncoder.encode(password);
     }
 	

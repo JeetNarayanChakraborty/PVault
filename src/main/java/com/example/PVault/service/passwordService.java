@@ -1,21 +1,87 @@
 package com.example.PVault.service;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import com.example.PVault.entityClasses.Password;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Service
 public class passwordService 
 {
+	private final Logger log = LoggerFactory.getLogger(passwordService.class);
+	
 	@Autowired
 	passwordRepository PasswordRepository;
 	
-	public void addPassword(Password password)
+	@Async
+	public CompletableFuture<Void> addPassword(Password password) 
 	{
-		PasswordRepository.save(password); // Save password
-    }
+	    String executionID = UUID.randomUUID().toString();
+	    int maxRetries = 3;
+	    int retryCount = 0;
+	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
+	    boolean success = false;
+	    Exception lastException = null;
+
+	    while(retryCount <= maxRetries && !success) 
+	    {
+	        try 
+	        {
+	            if(retryCount > 0) 
+	            {
+	                // Wait before retry
+	                try 
+	                {
+	                    Thread.sleep(backoffTimes[retryCount - 1]);
+	                    
+	                } 
+	                
+	                catch(InterruptedException ie) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                    return CompletableFuture.completedFuture(null);
+	                }
+	            }
+	            
+	            // Attempt to save the password
+	            PasswordRepository.save(password);
+	            success = true;
+	            
+	        } 
+	        
+	        catch(Exception e) 
+	        {
+	            retryCount++;
+	            lastException = e;
+	            
+	            if(retryCount > maxRetries) 
+	            {
+	                break;
+	            }
+	        }
+	    }
+	    
+	    if(success) 
+	    {
+	        log.info("Successfully saved password after {} attempts, execution: {}", 
+	                retryCount, executionID);
+	    } 
+	    
+	    else 
+	    {
+	        log.error("Failed to save password after {} attempts, execution: {}, error: {}", 
+	                 retryCount, executionID, lastException.getMessage());
+	    }
+	    
+	    return CompletableFuture.completedFuture(null);
+	}
+	
 	
 	public Password getPasswordByID(String ID)
 	{

@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -16,6 +15,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -66,6 +67,8 @@ public class MainController
 	
 	@Autowired
 	BackupAndRestoreService backupAndRestoreService;
+	
+	private static final Logger log = LoggerFactory.getLogger(MainController.class);
 	
 	
 	
@@ -130,45 +133,105 @@ public class MainController
 	    		body("Service is temporarily unavailable. Please try again later. :)");
 	}
 	
-	@RequestMapping("/generateMasterKey")
 	@CircuitBreaker(name = "generateMasterKeyCB", fallbackMethod = "generateMasterKeyFallback")
-	public void generateMasterKey(HttpServletRequest request, @RequestParam("hiddenField") String username) throws NoSuchAlgorithmException, 
-	                                                                                                               NoSuchPaddingException, InvalidKeyException, 
-	                                                                                                               IllegalBlockSizeException, BadPaddingException
+	@KafkaListener(topics = "generate-master-key-event", groupId = "user-group")
+	public void generateMasterKey(HttpServletRequest request, String username) throws NoSuchAlgorithmException, 
+	                                                                                  NoSuchPaddingException, InvalidKeyException, 
+	                                                                                  IllegalBlockSizeException, BadPaddingException
 	{
-		request.getSession().setAttribute("username", username);
-		String masterKey = UUID.randomUUID().toString().substring(0, 16); // Generate Master key
-		
-		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(256);
-        SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
-        String AESEncyptionKeyForMasterKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-		
-        request.getSession().setAttribute("AESEncyptionKeyForMasterKey", AESEncyptionKeyForMasterKey); //Save the AES key for master key in session
-		
-        SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(AESEncyptionKeyForMasterKey), "AES");
-        Cipher cipher = Cipher.getInstance("AES");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);              // Encrypt Master key using AES 
-        byte[] encryptedBytes = cipher.doFinal(masterKey.getBytes());
-        String encryptedMasterKey = Base64.getEncoder().encodeToString(encryptedBytes);
-		
-		passwordService.addMasterKey(username, encryptedMasterKey);   // Save it to DB
-		
-		String toEmail = username;
-		String mailSubject = "Master Key for password backup";
-		String mailBody = "Hi " + username
-				          + "/n/n"
-				          + "Master key is generated and securely stored";
-				         
-		try 
-		{
-			mailService.sendEmail(toEmail, mailSubject, mailBody);
-		} 
-		catch(MessagingException e) 
-		{
-			e.printStackTrace();
-		}
+		String executionId = UUID.randomUUID().toString();
+	    
+	    int maxRetries = 3;
+	    int retryCount = 0;
+	    int[] backoffTimes = {1000, 2000, 4000}; 
+	    boolean success = false;
+	    Exception lastException = null;
+	    
+	    log.info("Starting operation: {}", executionId);
+
+	    while(retryCount <= maxRetries && !success) 
+	    {
+	        try 
+	        {
+	            if(retryCount > 0) 
+	            {
+	                try 
+	                {
+	                    Thread.sleep(backoffTimes[retryCount - 1]);
+	                    log.info("Retry attempt {}, execution: {}", retryCount, executionId);
+	                } 
+	                
+	                catch(InterruptedException ie) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                    log.warn("Operation interrupted: {}", executionId);
+	                }
+	            }
+	            
+	            request.getSession().setAttribute("username", username);
+	    		String masterKey = UUID.randomUUID().toString().substring(0, 16); // Generate Master key
+	    		
+	    		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+	            keyGen.init(256);
+	            SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
+	            String AESEncyptionKeyForMasterKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+	    		
+	            request.getSession().setAttribute("AESEncyptionKeyForMasterKey", AESEncyptionKeyForMasterKey); //Save the AES key for master key in session
+	    		
+	            SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(AESEncyptionKeyForMasterKey), "AES");
+	            Cipher cipher = Cipher.getInstance("AES");
+	            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);              // Encrypt Master key using AES 
+	            byte[] encryptedBytes = cipher.doFinal(masterKey.getBytes());
+	            String encryptedMasterKey = Base64.getEncoder().encodeToString(encryptedBytes);
+	    		
+	    		passwordService.addMasterKey(username, encryptedMasterKey);   // Save it to DB
+	    		
+	    		String toEmail = username;
+	    		String mailSubject = "Master Key for password backup";
+	    		String mailBody = "Hi " + username
+	    				          + "/n/n"
+	    				          + "Master key is generated and securely stored";
+	    				         
+	    		try 
+	    		{
+	    			mailService.sendEmail(toEmail, mailSubject, mailBody);
+	    		} 
+	    		catch(MessagingException e) 
+	    		{
+	    			e.printStackTrace();
+	    		}
+	    		
+	            success = true;
+	        } 
+	        
+	        catch(Exception e) 
+	        {
+	            retryCount++;
+	            lastException = e;
+	            log.warn("Failed attempt {}, execution: {}", retryCount, executionId);
+	            
+	            if(retryCount > maxRetries) 
+	            {
+	                log.error("All retries failed for execution: {}, error: {}", 
+	                         executionId, e.getMessage());
+	                break;
+	            }
+	        }
+	    }
+	    
+	    if(success) 
+	    {
+	        log.info("Operation successfull after {} attempts, execution: {}", 
+	                retryCount, executionId);
+	    } 
+	  
+	    else 
+	    {
+	        log.error("Operation failed after {} attempts, execution: {}, error: {}", 
+	                 retryCount, executionId, lastException.getMessage());
+	    }
 	}
+	
 	
 	public ResponseEntity<String> generateMasterKeyFallback(User registrationFormData, String username, 
 															Throwable t) 
@@ -278,11 +341,6 @@ public class MainController
 	@KafkaListener(topics = "view-deleted-passwords-event", groupId = "user-group")
 	public String viewDeletedPasswords(Model model, HttpServletRequest request, String event)
 	{
-		System.out.println("Received event from deleted passwords event producer: " + event);
-		
-		
-		
-		
 		String username = (String) request.getSession().getAttribute("username");
 		List<Password> userDeletedPasswords = new ArrayList<Password>();
 		
@@ -298,31 +356,78 @@ public class MainController
 	
 	@KafkaListener(topics = "restore-password-event", groupId = "user-group")
 	public void restorePassword(Password userPassword)
-	{
-		System.out.println("Received event from restore password event producer: " + userPassword);
-		
-		
-		
+	{		
 		passwordService.addPassword(userPassword);
 	}
 	
-	@RequestMapping("/sendOTP")
 	@CircuitBreaker(name = "sendOTPCB", fallbackMethod = "sendOTPFallback")
-	public String sendOTP(HttpServletRequest request)
+	@KafkaListener(topics = "send-otp-event", groupId = "user-group")
+	public String emailOTP(ArrayList<String> emailDetails)
 	{
-		String userOTP = otpService.generateOTP();
-		request.getSession().setAttribute("OTP", userOTP);
-		String toEmail = (String) request.getSession().getAttribute("username");
-		
-		try 
-		{
-			otpService.sendOTPEmail(toEmail, userOTP);
-		} 
-		catch(MessagingException e) 
-		{
-			e.printStackTrace();
-		}
-		
+		String executionID = UUID.randomUUID().toString();
+	    int maxRetries = 3;
+	    int retryCount = 0;
+	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
+	    boolean success = false;
+	    Exception lastException = null;
+
+	    while(retryCount <= maxRetries && !success) 
+	    {
+	        try 
+	        {
+	            if(retryCount > 0) 
+	            {
+	                try 
+	                {
+	                    Thread.sleep(backoffTimes[retryCount - 1]);
+	                    
+	                } 
+	                
+	                catch(InterruptedException ie) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                }
+	            }
+	            
+	            String toEmail = emailDetails.get(0);
+	    		String userOTP = emailDetails.get(1);
+	    		
+	    		try 
+	    		{
+	    			otpService.sendOTPEmail(toEmail, userOTP);
+	    		} 
+	    		catch(MessagingException e) 
+	    		{
+	    			e.printStackTrace();
+	    		}
+	    		
+	            success = true; 
+	        } 
+	        
+	        catch(Exception e) 
+	        {
+	            retryCount++;
+	            lastException = e;
+	            
+	            if(retryCount > maxRetries) 
+	            {
+	                break;
+	            }
+	        }
+	    }
+	    
+	    if(success) 
+	    {
+	        log.info("Successfully saved password after {} attempts, execution: {}", 
+	                retryCount, executionID);
+	    } 
+	    
+	    else 
+	    {
+	        log.error("Failed to save password after {} attempts, execution: {}, error: {}", 
+	                 retryCount, executionID, lastException.getMessage());
+	    }
+	    
 		return "homePage";
 	}
 	
@@ -333,22 +438,73 @@ public class MainController
 	    		body("Service is temporarily unavailable. Please try again later.");
 	}
 	
-	@RequestMapping("/sendUserLoginOTP")
 	@CircuitBreaker(name = "sendUserLoginOTPCB", fallbackMethod = "sendUserLoginOTPFallback")
-	public void sendUserLoginOTP(HttpServletRequest request, @RequestParam("hiddenField") String username)
-	{
-		String userOTP = otpService.generateOTP();
-		request.getSession().setAttribute("OTP", userOTP);
-		String toEmail = username;
-	
-		try 
-		{
-			otpService.sendOTPEmail(toEmail, userOTP);
-		} 
-		catch(MessagingException e) 
-		{
-			e.printStackTrace();
-		}
+	@KafkaListener(topics = "send-user-login-otp-event", groupId = "user-group")
+	public void sendUserLoginOTP(ArrayList<String> emailDetails)
+	{	
+		String executionID = UUID.randomUUID().toString();
+	    int maxRetries = 3;
+	    int retryCount = 0;
+	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
+	    boolean success = false;
+	    Exception lastException = null;
+
+	    while(retryCount <= maxRetries && !success) 
+	    {
+	        try 
+	        {
+	            if(retryCount > 0) 
+	            {
+	                try 
+	                {
+	                    Thread.sleep(backoffTimes[retryCount - 1]);
+	                    
+	                } 
+	                
+	                catch(InterruptedException ie) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                }
+	            }	            
+
+	    		String userOTP = emailDetails.get(0);
+	    		String toEmail = emailDetails.get(1);
+	    	
+	    		try 
+	    		{
+	    			otpService.sendOTPEmail(toEmail, userOTP);
+	    		} 
+	    		catch(MessagingException e) 
+	    		{
+	    			e.printStackTrace();
+	    		}
+	                  
+	            success = true;      
+	        } 
+	        
+	        catch(Exception e) 
+	        {
+	            retryCount++;
+	            lastException = e;
+	            
+	            if(retryCount > maxRetries) 
+	            {
+	                break;
+	            }
+	        }
+	    }
+	    
+	    if(success) 
+	    {
+	        log.info("Successfull after {} attempts, execution: {}", 
+	                retryCount, executionID);
+	    } 
+	    
+	    else 
+	    {
+	        log.error("Failed after {} attempts, execution: {}, error: {}", 
+	                 retryCount, executionID, lastException.getMessage());
+	    }
 	}
 	
 	public ResponseEntity<String> sendUserLoginOTPFallback(HttpServletRequest request, String username, Throwable t) 
@@ -401,22 +557,74 @@ public class MainController
 	    return "redirect:/homePage";		
 	}
 	
-	@RequestMapping("/sendUserVaultOTP")
-	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback")   //Circuit breaker
-	public void sendUserVaultOTP(HttpServletRequest request)
+	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback") //Circuit breaker
+	@KafkaListener(topics = "send-user-vault-otp-event", groupId = "user-group")
+	public void sendUserVaultOTP(ArrayList<String> emailDetails)
 	{
-		String userOTP = otpService.generateOTP();
-		request.getSession().setAttribute("VaultOTP", userOTP);
-		String toEmail = (String) request.getSession().getAttribute("username");
-	
-		try 
-		{
-			otpService.sendOTPEmail(toEmail, userOTP);
-		} 
-		catch(MessagingException e) 
-		{
-			e.printStackTrace();
-		}
+		String executionID = UUID.randomUUID().toString();
+	    int maxRetries = 3;
+	    int retryCount = 0;
+	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
+	    boolean success = false;
+	    Exception lastException = null;
+
+	    while(retryCount <= maxRetries && !success) 
+	    {
+	        try 
+	        {
+	            if(retryCount > 0) 
+	            {
+	                // Wait before retry
+	                try 
+	                {
+	                    Thread.sleep(backoffTimes[retryCount - 1]);
+	                    
+	                } 
+	                
+	                catch(InterruptedException ie) 
+	                {
+	                    Thread.currentThread().interrupt();
+	                }
+	            }
+	            
+	            String userOTP = emailDetails.get(0);
+	    		String toEmail = emailDetails.get(1);
+	    	
+	    		try 
+	    		{
+	    			otpService.sendOTPEmail(toEmail, userOTP);
+	    		} 
+	    		catch(MessagingException e) 
+	    		{
+	    			e.printStackTrace();
+	    		}
+	    		
+	            success = true;	            
+	        } 
+	        
+	        catch(Exception e) 
+	        {
+	            retryCount++;
+	            lastException = e;
+	            
+	            if(retryCount > maxRetries) 
+	            {
+	                break;
+	            }
+	        }
+	    }
+	    
+	    if(success) 
+	    {
+	        log.info("Successfull after {} attempts, execution: {}", 
+	                retryCount, executionID);
+	    } 
+	    
+	    else 
+	    {
+	        log.error("Failed after {} attempts, execution: {}, error: {}", 
+	                 retryCount, executionID, lastException.getMessage());
+	    }	
 	}
 	
 	public ResponseEntity<String> sendUserVaultOTPFallback(HttpServletRequest request, Throwable t) 

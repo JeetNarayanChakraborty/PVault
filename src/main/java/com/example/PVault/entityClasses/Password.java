@@ -33,6 +33,14 @@ public class Password
 		this.id = UUID.randomUUID().toString(); // Automatically generate a UUID
 	}
 
+	public Password(String id, String username, String dname, String password) 
+	{
+		this.id = id;
+		this.username = username;
+		this.dname = dname;
+		this.password = password;
+	}
+
 	public String getId() 
 	{
 		return id;
