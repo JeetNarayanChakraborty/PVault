@@ -110,8 +110,6 @@ public class MainController
 		//check received event
 		System.out.println("Received user details from user event producer: " + registrationFormData);
 		
-		
-		
 		//Take password input
 		String inputPassword = registrationFormData.getPassword();
 		
