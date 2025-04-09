@@ -29,32 +29,15 @@ import security.OTPService;
 public class MainControllerTest 
 {
 
-    @Mock
-    private UserService userService;
-
-    @Mock
-    private passwordService passwordService;
-
-    @Mock
-    private AuthenticationService authService;
-
-    @Mock
-    private OTPService otpService;
-
-    @Mock
-    private MailService mailService;
-
-    @Mock
-    private BackupAndRestoreService backupAndRestoreService;
-
-    @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpSession session;
-
-    @Mock
-    private Model model;
+    @Mock private UserService userService;
+    @Mock private passwordService passwordService;
+    @Mock private AuthenticationService authService;
+    @Mock private OTPService otpService;
+    @Mock private MailService mailService;
+    @Mock private BackupAndRestoreService backupAndRestoreService;
+    @Mock private HttpServletRequest request;
+    @Mock private HttpSession session;
+    @Mock private Model model;
 
     @InjectMocks
     private MainController mainController;
@@ -200,9 +183,13 @@ public class MainControllerTest
         verify(userService, times(1)).addUser(user);
         try 
         {
-			verify(mailService, times(1)).sendEmail(eq("user"), anyString(), anyString());
-		} 
-        catch(MessagingException e) {e.printStackTrace();}
+            verify(mailService, times(1)).sendEmail(eq("user"), anyString(), anyString());
+        } 
+        
+        catch(MessagingException e) 
+        {
+            fail("Exception in mail service: " + e.getMessage());
+        }
     }
 
     @Test
@@ -212,9 +199,13 @@ public class MainControllerTest
         List<Password> passwords = new ArrayList<>();
         try 
         {
-			when(backupAndRestoreService.restoreUserSavedPasswords("user")).thenReturn(passwords);
-		} 
-        catch(Exception e) {e.printStackTrace();}
+            when(backupAndRestoreService.restoreUserSavedPasswords("user")).thenReturn(passwords);
+        } 
+        
+        catch(Exception e) 
+        {
+            fail("Exception during backup restore: " + e.getMessage());
+        }
         String view = mainController.viewDeletedPasswords(model, request, "event");
         assertEquals("restoredPasswords", view);
         verify(model, times(1)).addAttribute("deletedPasswordList", passwords);
@@ -238,9 +229,11 @@ public class MainControllerTest
         assertEquals("homePage", view);
         try 
         {
-			verify(otpService, times(1)).sendOTPEmail("user@example.com", "123456");
-		} 
-        catch(MessagingException e) {e.printStackTrace();}
+            verify(otpService, times(1)).sendOTPEmail("user@example.com", "123456");
+        } catch (MessagingException e) 
+        {
+            fail("Exception in OTP service: " + e.getMessage());
+        }
     }
 
     @Test
@@ -250,10 +243,14 @@ public class MainControllerTest
         emailDetails.add("123456");
         emailDetails.add("user@example.com");
         mainController.sendUserLoginOTP(emailDetails);
-        try {
-			verify(otpService, times(1)).sendOTPEmail("user@example.com", "123456");
-		} 
-        catch(MessagingException e) {e.printStackTrace();}
+        try 
+        {
+            verify(otpService, times(1)).sendOTPEmail("user@example.com", "123456");
+        } 
+        catch(MessagingException e) 
+        {
+            fail("Exception in OTP service: " + e.getMessage());
+        }
     }
 
     @Test

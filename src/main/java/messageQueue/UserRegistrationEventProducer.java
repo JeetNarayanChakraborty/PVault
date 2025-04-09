@@ -2,15 +2,14 @@ package messageQueue;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.example.PVault.entityClasses.User;
 
 
-@RestController
+@Controller
 @RequestMapping("/queue")
 public class UserRegistrationEventProducer 
 {
@@ -19,7 +18,7 @@ public class UserRegistrationEventProducer
     
 
     @PostMapping("/userRegistration")
-    public String publishUserRegistrationEvent(@RequestBody User registrationFormData) 
+    public String publishUserRegistrationEvent(@ModelAttribute User registrationFormData) 
     {
         kafkaTemplate.send("user-registration-event", registrationFormData);
         return "mainPage";

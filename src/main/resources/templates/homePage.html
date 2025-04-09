@@ -162,7 +162,7 @@
         {
             storeValue(); 
             let username = document.getElementById("stored_username").value;
-            window.location.href = `http://localhost:8080/main/sendUserLoginOTP?hiddenField=${encodeURIComponent(username)}`;
+            window.location.href = `http://localhost:8080/queue/sendUserLoginOTP?hiddenField=${encodeURIComponent(username)}`;
         }
 
         document.addEventListener("DOMContentLoaded", function () 
