@@ -17,6 +17,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 import com.example.PVault.entityClasses.User;
 import com.example.PVault.service.BackgroundService;
 import com.example.PVault.service.BackupAndRestoreService;
@@ -31,6 +34,7 @@ import jakarta.servlet.http.HttpSession;
 
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class BackgroundServiceTest 
 {
     @Mock
@@ -74,7 +78,7 @@ public class BackgroundServiceTest
         String queryStr = "SELECT u.username FROM users u JOIN password_history ph ON u.password = ph.Password WHERE ph.created_Time <= :timeThreshold";
         Query query = mock(Query.class);
         when(entityManager.createNativeQuery(queryStr)).thenReturn(query);
-        when(query.setParameter("timeThreshold", LocalDateTime.now().minusSeconds(2592000))).thenReturn(query);
+        when(query.setParameter(eq("timeThreshold"), any())).thenReturn(query);
         when(query.getResultList()).thenReturn(Arrays.asList("user1", "user2"));
 
         List<String> result = backgroundService.fetchData();
@@ -88,25 +92,28 @@ public class BackgroundServiceTest
     @Test
     public void testSendPasswordChangeReminder() throws MessagingException 
     {
-        List<String> usernames = Arrays.asList("user1", "user2");
-        when(backgroundService.fetchData()).thenReturn(usernames);
+        String queryStr = "SELECT u.username FROM users u JOIN password_history ph ON u.password = ph.Password WHERE ph.created_Time <= :timeThreshold";
+        Query query = mock(Query.class);
+        when(entityManager.createNativeQuery(queryStr)).thenReturn(query);
+        when(query.setParameter(eq("timeThreshold"), any())).thenReturn(query);
+        when(query.getResultList()).thenReturn(Arrays.asList("user1", "user2"));
 
         backgroundService.sendPasswordChangeReminder();
 
-        for(String username : usernames) 
-        {
-            verify(mailService, times(1)).sendEmail(eq(username), anyString(), anyString());
-        }
+        verify(mailService, times(1)).sendEmail(eq("user1"), anyString(), anyString());
+        verify(mailService, times(1)).sendEmail(eq("user2"), anyString(), anyString());
     }
 
     @Test
     public void testSendPasswordChangeReminder_ExceptionHandling() throws MessagingException 
     {
         List<String> usernames = Arrays.asList("user1", "user2");
-        when(backgroundService.fetchData()).thenReturn(usernames);
+
+        BackgroundService spyService = spy(backgroundService);
+        doReturn(usernames).when(spyService).fetchData();
         doThrow(new MessagingException()).when(mailService).sendEmail(anyString(), anyString(), anyString());
 
-        assertDoesNotThrow(() -> backgroundService.sendPasswordChangeReminder());
+        assertDoesNotThrow(() -> spyService.sendPasswordChangeReminder());
     }
 
     @Test

@@ -21,15 +21,16 @@ public class KeyManagementService
 	static passwordService passwordService;
 	
 
-    public KeyManagementService(HttpSession session) 
-    {
-        this.session = session;
-    }
+	public KeyManagementService(HttpSession session, passwordService passwordService) 
+	{
+	    this.session = session;
+	    this.passwordService = passwordService;
+	}
 	
 	public static String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 	                                                        BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
-		String keytoDecryptMasterKey = (String) session.getAttribute("AESEncyptionKeyForMasterKey");
+		String keytoDecryptMasterKey = (String) session.getAttribute("AESEncryptionKeyForMasterKey");
 		String encryptedMasterKey = passwordService.getMasterKey(username);
 		
 		SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(keytoDecryptMasterKey), "AES");

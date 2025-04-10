@@ -7,12 +7,19 @@ import java.util.List;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.ui.Model;
 import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
@@ -22,13 +29,15 @@ import com.example.PVault.service.UserService;
 import com.example.PVault.service.passwordService;
 import security.AuthenticationService;
 import security.OTPService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class MainControllerTest 
 {
-
     @Mock private UserService userService;
     @Mock private passwordService passwordService;
     @Mock private AuthenticationService authService;
@@ -49,19 +58,25 @@ public class MainControllerTest
     }
 
     @Test
-    public void testGetHomeAuthenticated() 
+    void testGetHomeAuthenticated() 
     {
-        when(session.getAttribute("username")).thenReturn("user");
-        String view = mainController.getHome(request);
-        assertEquals("mainPage", view);
+        Authentication auth = new UsernamePasswordAuthenticationToken("user", "pass", new ArrayList<>());
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        String result = mainController.getHome(mock(HttpServletRequest.class));
+        assertEquals("mainPage", result);
     }
 
     @Test
-    public void testGetHomeNotAuthenticated() 
+    void testGetHomeNotAuthenticated() 
     {
-        when(session.getAttribute("username")).thenReturn(null);
-        String view = mainController.getHome(request);
-        assertEquals("homePage", view);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(null); // or return an anonymous token
+        SecurityContextHolder.setContext(securityContext);
+        String viewName = mainController.getHome(mock(HttpServletRequest.class));
+        Assertions.assertEquals("homePage", viewName);
     }
 
     @Test
@@ -156,12 +171,21 @@ public class MainControllerTest
     }
 
     @Test
-    public void testUserLogout() 
+    void testUserLogout() 
     {
-        String view = mainController.userLogout(request);
-        assertEquals("redirect:/homePage", view);
-        verify(session, times(1)).invalidate();
+    	MainController controller = new MainController();
+    	
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        HttpSession session = Mockito.mock(HttpSession.class);
+
+        Mockito.when(request.getSession(false)).thenReturn(session);
+
+        String view = controller.userLogout(request);
+
+        Mockito.verify(session).invalidate(); // ✅ Verify session was invalidated
+        Assertions.assertEquals("redirect:/homePage", view);
     }
+
 
     @Test
     public void testHandlePasswordIdToEdit() 

@@ -13,15 +13,16 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.PVault.entityClasses.Password;
 import com.example.PVault.service.passwordRepository;
 
 
+@SpringBootTest
 @ActiveProfiles("test")
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class PasswordRepositoryTest 
 {
     @Mock
@@ -109,6 +110,7 @@ public class PasswordRepositoryTest
     }
 
     @Test
+    @Transactional
     public void testDeleteById() 
     {
         passwordRepository.deleteById("1");

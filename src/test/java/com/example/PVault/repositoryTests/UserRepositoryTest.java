@@ -2,44 +2,43 @@ package com.example.PVault.repositoryTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.PVault.entityClasses.User;
 import com.example.PVault.service.userRepository;
 
 
 
-@DataJpaTest
+@SpringBootTest
+@ActiveProfiles("test")
 public class UserRepositoryTest 
 {
-    @Mock
+    @Autowired
     private userRepository userRepository;
-
-    @InjectMocks
-    private UserRepositoryTest userRepositoryTest;
 
     private User user;
 
     @BeforeEach
     public void setUp() 
     {
-        MockitoAnnotations.openMocks(this);
         user = new User();
         user.setId(1L);
         user.setUsername("testUser");
         user.setPassword("testPassword");
+        userRepository.save(user);
     }
 
     @Test
     public void testFindByUsername() 
     {
-        when(userRepository.findByUsername("testUser")).thenReturn(user);
         User foundUser = userRepository.findByUsername("testUser");
         assertNotNull(foundUser);
         assertEquals("testUser", foundUser.getUsername());
@@ -48,25 +47,30 @@ public class UserRepositoryTest
     @Test
     public void testFindById() 
     {
-        when(userRepository.findById("1")).thenReturn(user);
-        User foundUser = userRepository.findById("1");
-        assertNotNull(foundUser);
-        assertEquals("testUser", foundUser.getUsername());
+        Optional<User> foundUser = userRepository.findById(1L);
+        assertNotNull(foundUser.orElse(null));
+        assertEquals("testUser", foundUser.get().getUsername());
     }
 
     @Test
+    @Transactional
     public void testDeleteByUsername() 
     {
         userRepository.deleteByUsername("testUser");
-        verify(userRepository).deleteByUsername("testUser");
+        User deleted = userRepository.findByUsername("testUser");
+        assertEquals(null, deleted);
     }
 
     @Test
     public void testSaveUser() 
     {
-        when(userRepository.save(user)).thenReturn(user);
-        User savedUser = userRepository.save(user);
+        User newUser = new User();
+        newUser.setId(2L);
+        newUser.setUsername("newUser");
+        newUser.setPassword("newPassword");
+
+        User savedUser = userRepository.save(newUser);
         assertNotNull(savedUser);
-        assertEquals("testUser", savedUser.getUsername());
+        assertEquals("newUser", savedUser.getUsername());
     }
 }
