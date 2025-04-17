@@ -27,7 +27,7 @@ public class KeyManagementService
 	    this.passwordService = passwordService;
 	}
 	
-	public static String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
+	public String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 	                                                        BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
 		String keytoDecryptMasterKey = (String) session.getAttribute("AESEncryptionKeyForMasterKey");

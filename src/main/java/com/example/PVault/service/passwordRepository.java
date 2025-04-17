@@ -33,4 +33,6 @@ public interface passwordRepository extends JpaRepository<Password, String>
     String getMasterKeyByUsername(@Param("username") String username);
     
 	void deleteById(String ID);
+
+	Object getUserBackUp(long anyLong);
 }

@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
+import com.example.PVault.service.AIService;
 import com.example.PVault.service.BackupAndRestoreService;
 import com.example.PVault.service.MailService;
 import com.example.PVault.service.UserService;
@@ -68,6 +69,13 @@ public class MainController
 	@Autowired
 	BackupAndRestoreService backupAndRestoreService;
 	
+	@Autowired
+	AuthenticationService authenticationService;
+	
+	@Autowired
+	AIService aiService;
+	
+	
 	private static final Logger log = LoggerFactory.getLogger(MainController.class);
 	
 	
@@ -101,6 +109,18 @@ public class MainController
 	public String getMainPage()
 	{
 		return "mainPage";
+	}
+	
+	@GetMapping("/getPasswordChangeForm")
+	public String getPasswordChangeForm()
+	{
+		return "passwordChangeForm";
+	}
+	
+	@GetMapping("/takeUsername")
+	public String takeUsername()
+	{
+		return "takeUsername";
 	}
 	
 	@CircuitBreaker(name = "userRegistrationCB", fallbackMethod = "userRegistrationFallback")
@@ -538,11 +558,73 @@ public class MainController
 	
 	public ResponseEntity<String> userLoginFallback(User userLoginFormData, 
             										HttpServletRequest request, String otp, Throwable t) 
-		{
-			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
-					body("Service is temporarily unavailable. Please try again later. :)");  //Fallback method
-		}
+	{
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+			   body("Service is temporarily unavailable. Please try again later. :)");  //Fallback method
+	}
 	
+	@GetMapping("/forgotPassword")
+	public String forgotPassword(@RequestParam("username") String username, HttpServletRequest request)
+	{
+		request.getSession().setAttribute("username", username);
+		
+		String mailSubject = "Reset Your PVault Password";
+		String resetLink = "http://localhost:8080/main/getPasswordChangeForm?username=" + username;
+		String mailBody =
+					    "Hi,\n\n" +
+					    "We received a request to reset your PVault password. Please click the link below to reset it:\n\n" +
+					    resetLink + "\n\n" +
+					    "This link will expire in 30 minutes.\n\n" +
+					    "If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.\n\n" +
+					    "Thanks,\nThe PVault Team";
+		
+		try 
+		{
+			mailService.sendEmail(username, mailSubject, mailBody);
+		} 
+		catch(MessagingException e)
+		{
+			e.printStackTrace();
+		}
+		
+		return "passwordResetUserNotifier";
+	}
+	
+	@PostMapping("/passwordChange")
+	public ResponseEntity<?> passwordChange(@RequestParam("newPassword") String newPassword, HttpServletRequest request)
+	{
+		String username = (String) request.getSession().getAttribute("username");
+		User user = userService.getUser(username);
+		String oldPassword = user.getPassword();
+		
+		if(!newPassword.isEmpty() && authenticationService.authenticate(newPassword, oldPassword))
+		{
+			String hashedPassword = authenticationService.encrypt(newPassword);
+			user.setPassword(hashedPassword);
+			userService.addUser(user);
+			
+			String mailSubject = "Password change for PVault";
+			String mailBody = "Your Password have been successfully updated\n"
+					        + "Your new password: " + newPassword;
+			
+			try 
+			{
+				mailService.sendEmail(username, mailSubject, mailBody);
+			} 
+			catch(MessagingException e) 
+			{
+				e.printStackTrace();
+			}
+			
+			return ResponseEntity.ok().body("homePage");
+		}
+		
+		else
+		{
+			return ResponseEntity.ok().body("Password change failed: new password same as old password");
+		}
+	}
+
 	@RequestMapping("/userLogout")
 	public String userLogout(HttpServletRequest request)
 	{
@@ -646,6 +728,38 @@ public class MainController
 		else
 		{
 			return "homePage";
+		}
+	}
+	
+	@GetMapping("/getAIPasswordInsights")
+	public String getAIPasswordInsights(@RequestParam("stored_password") String password, Model model)
+	{
+		boolean isPasswordFound= false;
+		String passwordAnalysis = null;
+		
+		try 
+		{
+			isPasswordFound = aiService.isPasswordPwned(password);
+			passwordAnalysis = aiService.analyzePasswordWithAI(password);
+		} 
+		catch(Exception e) {e.printStackTrace();}
+		
+		if(isPasswordFound)
+		{
+			String s = "Warning: This password has been exposed in one or more data breaches."
+					 + "It is recommended to choose a different, more secure password\r\n";
+			
+			String fullAnalysis = s + passwordAnalysis;
+			model.addAttribute("passwordAnalysis", fullAnalysis);
+			return "showPasswordInsight";
+		}
+		
+		else
+		{
+			String s = "This password is not found in any data breaches. However, please ensure it meets security best practices.\r\n";
+			String fullAnalysis = s + passwordAnalysis;
+			model.addAttribute("passwordAnalysis", fullAnalysis);
+			return "showPasswordInsight";
 		}
 	}
 }

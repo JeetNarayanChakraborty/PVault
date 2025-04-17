@@ -123,6 +123,39 @@
             margin-top: 3px;
             font-style: italic;
         }
+        
+        .input-wrapper
+        {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .password-field 
+        {
+            flex: 1;
+            padding-right: 40px;
+        }
+
+        .side-btn 
+        {
+            background-color: #4facfe;
+            border: none;
+            color: white;
+            padding: 9px 12px;
+            margin-left: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .side-btn:hover 
+        {
+            background-color: #00c6ff;
+        }
+
     </style>
 </head>
 <body>
@@ -132,7 +165,11 @@
             <div class="tagline">A reliable way of storing credentials</div>
             <input type="text" name="username" class="input-field" placeholder="Enter Username" oninput="storeValue()"/>
             <input type="hidden" id="stored_username" name="hiddenField">
-            <input type="password" id="password" name="password" class="input-field" placeholder="Create Password" />
+            <div class="input-wrapper">
+                <input type="password" id="password" name="password" class="input-field password-field" placeholder="Create Password" oninput="storePasswordValue()"/>
+                <input type="hidden" id="stored_password" name="hiddenField">
+                <button onclick="window.location.href='http://localhost:8080/main/getAIPasswordInsights';" type="button" class="side-btn">Get AI Insight</button>
+            </div>
             <input type="password" name="confirmPassword" class="input-field" placeholder="Re-enter created Password" />
             <div id="strengthDisplay" style="font-size: 15px;">Password Strength: <span id="strengthText"> </span></div>
             <button type="submit" class="btn">Sign Up</button>
@@ -162,6 +199,12 @@
         {
             let username = document.getElementById("username").value;
             document.getElementById("stored_username").value = username;
+        }
+
+        function storePasswordValue() 
+        {
+            let password = document.getElementById("password").value;
+            document.getElementById("stored_password").value = password;
         }
 
         function generateMasterKey() 

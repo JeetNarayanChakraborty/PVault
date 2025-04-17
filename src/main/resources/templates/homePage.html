@@ -138,9 +138,11 @@
             <input type="text" id="username" name="username" class="input-field" placeholder="Username" oninput="storeValue()"/>
             <input type="password" name="password" class="input-field" placeholder="Password" />
             <input type="text" name="otp" class="input-field" placeholder="OTP"/>
-            <div class="checkbox-container">
-                <input type="checkbox" id="remember-me">
-                <label for="remember-me">Remember Me</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; font-size: 0.85rem">
+                    <input type="checkbox" style="margin-right: 5px;"> Remember Me
+                </label>
+                <a href="http://localhost:8080/main/takeUsername" style="font-size: 0.85rem; color: #4facfe; text-decoration: none;">Forgot Password?</a>
             </div>
             <!-- Hidden field to store username -->
             <input type="hidden" id="stored_username" name="hiddenField">
@@ -158,6 +160,7 @@
             let username = document.getElementById("username").value;
             document.getElementById("stored_username").value = username;
         }
+
         function sendOTP() 
         {
             storeValue(); 
@@ -167,12 +170,12 @@
 
         document.addEventListener("DOMContentLoaded", function () 
         {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has("sessionExpired")) 
-        {
-            alert("Your session expired due to inactivity. Please log in again.");
-        }
-    });
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has("sessionExpired")) 
+            {
+                alert("Your session expired due to inactivity. Please log in again.");
+            }
+        });
     </script>
 </body>
 </html>

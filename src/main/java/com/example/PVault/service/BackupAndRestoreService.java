@@ -47,12 +47,20 @@ public class BackupAndRestoreService
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 	
 	
+	public BackupAndRestoreService(passwordService passwordService, MailService mailService, UserService userService, KeyManagementService keyManagementService) 
+	{
+		this.passwordService = passwordService;
+		this.mailService = mailService;
+		this.userService = userService;
+		this.keyManagementService = keyManagementService;
+	}
+
 	public void backupUserSavedPasswords(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 																 BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
 		SecretKey secretKey = null;
 		
-		String masterkey = KeyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
+		String masterkey = keyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
 		
 		MessageDigest sha = MessageDigest.getInstance("SHA-256");
         byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
@@ -105,7 +113,7 @@ public class BackupAndRestoreService
 	private static String encryptMap(HashMap<String, pwd> map, SecretKey key) throws Exception 
 	{
         String json = objectMapper.writeValueAsString(map); // Convert to JSON
-        Cipher cipher = Cipher.getInstance("AES");
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, key);
         return Base64.getEncoder().encodeToString(cipher.doFinal(json.getBytes()));
     }
@@ -118,7 +126,7 @@ public class BackupAndRestoreService
 		
 		SecretKey secretKey = null;
 		User u = userService.getUser(username);
-		String masterkey = KeyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
+		String masterkey = keyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
 		
 		MessageDigest sha = MessageDigest.getInstance("SHA-256");
         byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
@@ -170,7 +178,7 @@ public class BackupAndRestoreService
     // Decrypt HashMap
 	private static HashMap<String, pwd> decryptMap(String encryptedData, SecretKey key) throws Exception 
 	{
-		Cipher cipher = Cipher.getInstance("AES");
+		Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 	    cipher.init(Cipher.DECRYPT_MODE, key);
 	    String json = new String(cipher.doFinal(Base64.getDecoder().decode(encryptedData))); // Decrypt to JSON
 	    return objectMapper.readValue(json, new TypeReference<HashMap<String, pwd>>() {}); // Convert JSON back to HashMap
@@ -192,6 +200,11 @@ class pwd
 {
 	String websiteName;
 	String Password;
+	
+	public pwd() 
+	{
+        // Empty default constructor needed for Jackson deserialization
+    }
 	
 	public pwd(String websiteName, String Password)
 	{
