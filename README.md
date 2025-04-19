@@ -2,11 +2,14 @@
 
 PVault is a secure and efficient password management application designed to help users store and manage their passwords safely. Built with Spring Boot, Hibernate, MySQL, HTML, and a little JavaScript, PVault ensures that your credentials are protected and easily accessible when needed.
 
+In addition to core password management capabilities, PVault includes an advanced **Password Insight** feature. This feature uses AI and Have I Been Pwned to analyze passwords in detail — checking strength, identifying patterns, and verifying whether the password has been compromised in known data breaches.
+
 ## Features
 
 - **Secure Storage**: Passwords are encrypted and stored securely to prevent unauthorized access.
 - **User-Friendly Interface**: Intuitive design for easy navigation and management of your passwords.
 - **Two-Factor Authentication using OTP**: Enhances security by requiring an additional verification step.
+- **Password Insight Analysis**: Provides detailed feedback on password strength, detects common patterns, and integrates with Have I Been Pwned to check if the password has appeared in any known breaches.
 
 ## Installation
 
@@ -46,6 +49,7 @@ Once the application is running:
 - **View Stored Passwords**: Access the 'View Passwords' section to see all your stored credentials.
 - **Delete a Password**: In the 'View Passwords' section, select the password you wish to delete and confirm your action.
 - **Restore Deleted Password**: Recover accidentally deleted passwords from the restore section.
+- **Get Password Insights**: Use the Password Insight feature to receive AI-generated analysis of your password’s strength, common patterns, and breach history via Have I Been Pwned.
 
 ## Scalability & Resiliency Enhancements
 
