@@ -732,7 +732,7 @@ public class MainController
 	}
 	
 	@GetMapping("/getAIPasswordInsights")
-	public String getAIPasswordInsights(@RequestParam("stored_password") String password, Model model)
+	public String getAIPasswordInsights(@RequestParam("stored_Password") String password, Model model)
 	{
 		boolean isPasswordFound= false;
 		String passwordAnalysis = null;
@@ -747,17 +747,17 @@ public class MainController
 		if(isPasswordFound)
 		{
 			String s = "Warning: This password has been exposed in one or more data breaches."
-					 + "It is recommended to choose a different, more secure password\r\n";
+					 + "It is recommended to choose a different, more secure password.";
 			
-			String fullAnalysis = s + passwordAnalysis;
+			String fullAnalysis = s + "<br><br>" + passwordAnalysis;
 			model.addAttribute("passwordAnalysis", fullAnalysis);
 			return "showPasswordInsight";
 		}
 		
 		else
 		{
-			String s = "This password is not found in any data breaches. However, please ensure it meets security best practices.\r\n";
-			String fullAnalysis = s + passwordAnalysis;
+			String s = "This password is not found in any data breaches. However, please ensure it meets security best practices.";
+			String fullAnalysis = s + "<br><br>" + passwordAnalysis;
 			model.addAttribute("passwordAnalysis", fullAnalysis);
 			return "showPasswordInsight";
 		}

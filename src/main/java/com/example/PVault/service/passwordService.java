@@ -129,11 +129,6 @@ public class passwordService
     {
     	return PasswordRepository.getMasterKeyByUsername(username);
     }
-
-	public Object getUserBackUp(long anyLong) 
-	{
-		return PasswordRepository.getUserBackUp(anyLong);
-	}
 }
 
 

@@ -141,11 +141,6 @@ public class BackupAndRestoreServiceTest
             cipher.doFinal(jsonData.getBytes(StandardCharsets.UTF_8))
         );
 
-        // Mock backup data
-        List<String> encryptedBackups = new ArrayList<>();
-        encryptedBackups.add(encrypted);
-        when(passwordService.getUserBackUp(anyLong())).thenReturn(encryptedBackups);
-
         // Mock user
         User mockUser = new User();
         mockUser.setId(1L);
