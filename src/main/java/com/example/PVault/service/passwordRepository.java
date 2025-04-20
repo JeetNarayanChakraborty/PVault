@@ -34,3 +34,8 @@ public interface passwordRepository extends JpaRepository<Password, String>
     
 	void deleteById(String ID);
 }
+
+
+
+
+

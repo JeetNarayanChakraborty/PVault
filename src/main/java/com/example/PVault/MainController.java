@@ -29,12 +29,16 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
 import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
 import com.example.PVault.service.AIService;
 import com.example.PVault.service.BackupAndRestoreService;
+import com.example.PVault.service.Encryptor;
 import com.example.PVault.service.MailService;
 import com.example.PVault.service.UserService;
 import com.example.PVault.service.passwordService;
@@ -74,6 +78,9 @@ public class MainController
 	
 	@Autowired
 	AIService aiService;
+	
+	@Autowired
+	Encryptor encryptor;
 	
 	
 	private static final Logger log = LoggerFactory.getLogger(MainController.class);
@@ -121,6 +128,13 @@ public class MainController
 	public String takeUsername()
 	{
 		return "takeUsername";
+	}
+	
+	@PostMapping("/decryptPassword")
+	@ResponseBody
+	public String decryptPassword(@RequestBody String encryptedPassword) 
+	{
+	    return encryptor.decrypt(encryptedPassword.trim());
 	}
 	
 	@CircuitBreaker(name = "userRegistrationCB", fallbackMethod = "userRegistrationFallback")
@@ -371,7 +385,7 @@ public class MainController
 		model.addAttribute("deletedPasswordList", userDeletedPasswords);
 		return "restoredPasswords";
 	}
-	
+		
 	@KafkaListener(topics = "restore-password-event", groupId = "user-group")
 	public void restorePassword(Password userPassword)
 	{		

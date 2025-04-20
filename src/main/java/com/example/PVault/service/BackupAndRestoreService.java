@@ -66,7 +66,6 @@ public class BackupAndRestoreService
         byte[] keyBytes = sha.digest(masterkey.getBytes(StandardCharsets.UTF_8));
         secretKey = new SecretKeySpec(keyBytes, "AES");    // Derive AES key from master key
 	
-  
 		List<Object[]> res = passwordService.getWebsiteAndPassword(username);
 		HashMap<String, pwd> pwdDetails = new HashMap<String, pwd>();
 		
@@ -171,9 +170,9 @@ public class BackupAndRestoreService
             userDeletedPasswords.add(passwordService.getPasswordByID(passwordID));
     	}
         
-        return userDeletedPasswords;
-	}	
-
+        return userDeletedPasswords; // Return the list of deleted passwords
+	}
+               
 
     // Decrypt HashMap
 	private static HashMap<String, pwd> decryptMap(String encryptedData, SecretKey key) throws Exception 

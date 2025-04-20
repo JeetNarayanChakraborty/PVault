@@ -19,6 +19,9 @@ public class passwordService
 	@Autowired
 	passwordRepository PasswordRepository;
 	
+	@Autowired
+	Encryptor encryptor;
+	
 	@Async
 	public CompletableFuture<Void> addPassword(Password password) 
 	{
@@ -49,10 +52,12 @@ public class passwordService
 	                }
 	            }
 	            
+	            // Encrypt the password before saving
+	            password.setPassword(encryptor.encrypt(password.getPassword()));
+	            
 	            // Attempt to save the password
 	            PasswordRepository.save(password);
 	            success = true;
-	            
 	        } 
 	        
 	        catch(Exception e) 
@@ -85,19 +90,28 @@ public class passwordService
 	
 	public Password getPasswordByID(String ID)
 	{
-		return PasswordRepository.findPasswordDetailsById(ID);
+		Password password = PasswordRepository.findPasswordDetailsById(ID);
+		password.setPassword(encryptor.decrypt(password.getPassword()));  // Decrypt password
+		return password;  // Return decrypted password
 	}
     
     public List<Password> getAllPasswords(String username)
     {
-    	return PasswordRepository.findAllPasswordsByUsername(username);  //Get user passwords
+    	List<Password> passwords = PasswordRepository.findAllPasswordsByUsername(username);
+    
+    	for(Password password : passwords) 
+		{
+			password.setPassword(encryptor.decrypt(password.getPassword()));  // Decrypt each password
+		}
+    	
+		return passwords;  // Return list of decrypted passwords
     }
     
     public void updatePassword(String ID, String UpdatedPassword)
     {
-    	Password intendedWebsitePassword = PasswordRepository.findPasswordDetailsById(ID);  // Update Website password
-    	intendedWebsitePassword.setPassword(UpdatedPassword);
-    	PasswordRepository.save(intendedWebsitePassword);
+    	Password rawPassword = PasswordRepository.findPasswordDetailsById(ID);  // Get raw password
+    	rawPassword.setPassword(encryptor.encrypt(UpdatedPassword));  // Decrypt password
+    	PasswordRepository.save(rawPassword);
     }
 
     public void deletePassword(String ID) 
@@ -107,7 +121,14 @@ public class passwordService
     
     public List<Object[]> getWebsiteAndPassword(String username)
     {
-    	return PasswordRepository.findWebsiteAndPasswordByUsername(username);
+    	List<Object[]> passwords = PasswordRepository.findWebsiteAndPasswordByUsername(username);
+    	
+    	for(Object[] passwordDetails : passwords)
+    	{
+    		passwordDetails[2] = encryptor.decrypt((String) passwordDetails[2]);  // Decrypt each password	
+    	}
+    	
+    	return passwords;  // Return list of decrypted passwords
     }
     
     public void addUserBackup(String userID, String backup)
