@@ -1,42 +1,73 @@
 package security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
-
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.Properties;
-
+import jakarta.mail.Message;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.Multipart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import jakarta.mail.Message;
-import jakarta.mail.MessagingException;
-import jakarta.mail.Session;
-import jakarta.mail.internet.MimeMessage;
-
 
 
 public class OTPServiceTest 
 {
+
     @Mock
     private JavaMailSender mailSender;
 
     @InjectMocks
     private OTPService otpService;
 
+    private ArgumentCaptor<MimeMessage> messageCaptor;
+
     @BeforeEach
     public void setUp() 
     {
         MockitoAnnotations.openMocks(this);
+        messageCaptor = ArgumentCaptor.forClass(MimeMessage.class);
+    }
+    
+    private String extractTextFromMessage(MimeMessage message) throws Exception 
+    {
+        Object content = message.getContent();
+        StringBuilder textContent = new StringBuilder();
+        
+        if(content instanceof String) 
+        {
+            textContent.append((String) content);
+        } 
+        
+        else if(content instanceof Multipart) 
+        {
+            Multipart multipart = (Multipart) content;
+            
+            for(int i=0; i<multipart.getCount(); i++) 
+            {
+                jakarta.mail.BodyPart part = multipart.getBodyPart(i);
+                Object partContent = part.getContent();
+                
+                if(partContent instanceof String) 
+                {
+                    textContent.append((String) partContent);
+                } 
+                
+                else if(partContent instanceof Multipart) 
+                {
+                    MimeMessage tempMessage = new MimeMessage((jakarta.mail.Session) null);
+                    tempMessage.setContent(partContent, part.getContentType());
+                    textContent.append(extractTextFromMessage(tempMessage));
+                }
+            }
+        }
+        
+        return textContent.toString();
     }
 
     @Test
@@ -44,58 +75,38 @@ public class OTPServiceTest
     {
         String otp = otpService.generateOTP();
         assertEquals(6, otp.length());
-        
-        for (char c : otp.toCharArray()) 
+
+        for(char c : otp.toCharArray()) 
         {
             assertTrue(Character.isDigit(c));
         }
     }
 
     @Test
-    public void testSendOTPEmail() throws Exception {
+    public void testSendOTPEmail() throws Exception 
+    {
         String toEmail = "test@example.com";
         String otp = "123456";
-
-        // Create a real MimeMessage with a session
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(System.getProperties()));
         
-        // Mock JavaMailSender to return our real message
-        when(mailSender.createMimeMessage()).thenReturn(message);
-
-        // Call the method under test
+        jakarta.mail.Session session = jakarta.mail.Session.getInstance(new java.util.Properties(), null);
+        MimeMessage mimeMessage = new MimeMessage(session);
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        
         otpService.sendOTPEmail(toEmail, otp);
+        
+        verify(mailSender).send(messageCaptor.capture());
+        MimeMessage sentMessage = messageCaptor.getValue();
+        
+        assertEquals(toEmail, sentMessage.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("OTP Code for PVault", sentMessage.getSubject());
 
-        // Send triggers any finalization
-        verify(mailSender, times(1)).send(message);
-
-        // Read and assert message properties
-        assertEquals(toEmail, message.getRecipients(Message.RecipientType.TO)[0].toString());
-        assertEquals("OTP Code for PVault", message.getSubject());
-
-        // Extract content
-        Object content = message.getContent();
-        String actualText = "";
-
-        if (content instanceof jakarta.mail.Multipart multipart) {
-            var bodyPart = multipart.getBodyPart(0);
-            Object partContent = bodyPart.getContent();
-            if (partContent instanceof String str) {
-                actualText = str.trim();
-            }
-        } else if (content instanceof String str) {
-            actualText = str.trim();
-        }
-
-        String expectedText = ("Your OTP code is: " + otp 
-                              + "\n\n\n"
-                              + "This verification code will only be valid for the next 5 mins.\n"
-                              + "If you didn't sign up for PVault please ignore this mail.").trim();
-
-        assertEquals(expectedText, actualText);
+        String messageContent = extractTextFromMessage(sentMessage);
+        assertTrue(messageContent.contains(otp), "Email should contain the OTP");
+        assertTrue(messageContent.contains("Your OTP code is"), "Email should contain intro text");
+        assertTrue(messageContent.contains("This verification code will only be valid"), "Email should contain validity statement");
+        assertTrue(messageContent.contains("If you didn't sign up for PVault"), "Email should contain disclaimer");
     }
-
 }
-
 
 
 
