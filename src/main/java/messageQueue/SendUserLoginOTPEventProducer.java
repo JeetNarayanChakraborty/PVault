@@ -1,6 +1,6 @@
 package messageQueue;
 
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,9 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Controller;
 
 
-@RestController
+@Controller
 @RequestMapping("/queue")
 public class SendUserLoginOTPEventProducer 
 {
@@ -29,8 +30,8 @@ public class SendUserLoginOTPEventProducer
 	private final Logger log = LoggerFactory.getLogger(SendUserLoginOTPEventProducer.class);
 	
 	
-	@PostMapping("/sendUserLoginOTP")
-	public void publishSendUserLoginOTPEvent(HttpServletRequest request, @RequestParam("hiddenField") String username) 
+	@GetMapping("/sendUserLoginOTP")
+	public String publishSendUserLoginOTPEvent(HttpServletRequest request, @RequestParam("hiddenField") String username) 
 	{
 		String executionID = UUID.randomUUID().toString();
 	    int maxRetries = 3;
@@ -87,12 +88,14 @@ public class SendUserLoginOTPEventProducer
 	    {
 	        log.info("Successfully after {} attempts, execution: {}", 
 	                retryCount, executionID);
+	        return "homePage";
 	    } 
 	    
 	    else 
 	    {
 	        log.error("Failed after {} attempts, execution: {}, error: {}", 
 	                 retryCount, executionID, lastException.getMessage());
+	        return "homePage";
 	    }
 	}
 }

@@ -10,7 +10,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
-@ComponentScan(basePackages = {"com.example.PVault", "security"})
+@ComponentScan(basePackages = {"com.example.PVault", "com.example.PVault.entityClasses", 
+		                       "com.example.PVault.service", "messageQueue", "security"})
 public class PVaultApplication 
 {
 	public static void main(String[] args) 

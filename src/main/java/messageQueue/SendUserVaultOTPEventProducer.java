@@ -6,14 +6,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import security.OTPService;
 
 
-@RestController
+@Controller
 @RequestMapping("/queue")
 public class SendUserVaultOTPEventProducer 
 {
@@ -26,8 +27,8 @@ public class SendUserVaultOTPEventProducer
 	private final Logger log = LoggerFactory.getLogger(SendOTPEventProducer.class);
 	
 	
-	@PostMapping("/sendUserVaultOTP")
-	public void publishRestorePasswordEvent(HttpServletRequest request) 
+	@GetMapping("/sendUserVaultOTP")
+	public String publishRestorePasswordEvent(HttpServletRequest request) 
 	{
 		String executionID = UUID.randomUUID().toString();
 	    int maxRetries = 3;
@@ -83,12 +84,14 @@ public class SendUserVaultOTPEventProducer
 	    {
 	        log.info("Successfull after {} attempts, execution: {}", 
 	                retryCount, executionID);
+	        return "vaultOTP";
 	    } 
 	    
 	    else 
 	    {
 	        log.error("Failed after {} attempts, execution: {}, error: {}", 
 	                 retryCount, executionID, lastException.getMessage());
+	        return "vaultOTP";
 	    }
 	}
 }

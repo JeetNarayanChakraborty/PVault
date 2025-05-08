@@ -33,6 +33,11 @@ public class User
 	{
 		return id;
 	}
+	
+	public void setId(String id) 
+	{
+		this.id = id;
+	}
 
 	public String getUsername() 
 	{
@@ -52,16 +57,6 @@ public class User
 	public void setPassword(String password) 
 	{
 		this.password = password;
-	}
-
-	public void setId(int i) 
-	{
-		this.id = String.valueOf(i);		
-	}
-
-	public void setId(long long1) 
-	{
-		this.id = String.valueOf(long1);		
 	}
 }
 

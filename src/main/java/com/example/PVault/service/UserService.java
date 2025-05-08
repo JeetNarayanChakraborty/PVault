@@ -39,4 +39,20 @@ public class UserService
     {
         userRepository.deleteByUsername(username); // Delete user by ID
     }
+    
+    public void updatePasswordHistory(String userID)
+    {
+    	userRepository.updatePasswordHistory(userID); // Update password history
+    }
 }
+
+
+
+
+
+
+
+
+
+
+

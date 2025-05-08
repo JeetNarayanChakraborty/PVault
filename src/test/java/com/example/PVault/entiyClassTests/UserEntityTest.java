@@ -44,16 +44,8 @@ public class UserEntityTest
     @Test
     public void testSetIdWithInt() 
     {
-        int id = 123;
+        String id = "123";
         user.setId(id);
         assertEquals(String.valueOf(id), user.getId(), "ID should be set correctly with int");
-    }
-
-    @Test
-    public void testSetIdWithLong() 
-    {
-        long id = 123456789L;
-        user.setId(id);
-        assertEquals(String.valueOf(id), user.getId(), "ID should be set correctly with long");
     }
 }

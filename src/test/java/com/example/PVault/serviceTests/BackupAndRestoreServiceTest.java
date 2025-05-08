@@ -69,7 +69,7 @@ public class BackupAndRestoreServiceTest
     {
         username = "testUser";
         user = new User();
-        user.setId(1);
+        user.setId("123456");
         user.setUsername(username);
 
         passwordList = new ArrayList<>();
@@ -143,7 +143,7 @@ public class BackupAndRestoreServiceTest
 
         // Mock user
         User mockUser = new User();
-        mockUser.setId(1L);
+        mockUser.setId("1234567");
         when(userService.getUser(username)).thenReturn(mockUser);
 
         // Mock current passwords so that they get removed during comparison

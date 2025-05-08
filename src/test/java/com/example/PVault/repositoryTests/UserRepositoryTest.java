@@ -30,7 +30,7 @@ public class UserRepositoryTest
     public void setUp() 
     {
         user = new User();
-        user.setId(1L);
+        user.setId("12345");
         user.setUsername("testUser");
         user.setPassword("testPassword");
         userRepository.save(user);
@@ -65,7 +65,7 @@ public class UserRepositoryTest
     public void testSaveUser() 
     {
         User newUser = new User();
-        newUser.setId(2L);
+        newUser.setId("123456");
         newUser.setUsername("newUser");
         newUser.setPassword("newPassword");
 

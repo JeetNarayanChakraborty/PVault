@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact</title>
+    <style>
+        body 
+        {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container 
+        {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .logo 
+        {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .tagline 
+        {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 25px;
+        }
+
+        .contact-info 
+        {
+            font-size: 0.95rem;
+            color: #444;
+            line-height: 1.8;
+        }
+
+        .contact-info strong 
+        {
+            color: #000;
+        }
+
+        .btn 
+        {
+            margin-top: 20px;
+            background-color: #4facfe;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover 
+        {
+            background-color: #00c6ff;
+        }
+
+        .footer 
+        {
+            margin-top: 25px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        @keyframes fadeIn 
+        {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tagline">We're here to help you.</div>
+        <div class="contact-info">
+            <p><strong>Email:</strong> support@pvault.com</p>
+        </div>
+        <a href="http://localhost:8080/main/getMainPage" class="btn">Go Back Home</a>
+        <div class="footer">&copy; 2025 P Vault. All rights reserved.</div>
+    </div>
+</body>
+</html>

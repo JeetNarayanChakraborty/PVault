@@ -2,9 +2,12 @@ package com.example.PVault.service;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.PVault.entityClasses.Password;
 
 
@@ -26,7 +29,9 @@ public interface passwordRepository extends JpaRepository<Password, String>
     @Query(value = "SELECT backup FROM password_backup WHERE ID = :userID", nativeQuery = true)
     List<String> getBackup(@Param("userID") String userID);
     
-    @Query(value = "INSERT INTO secureKeys VALUES (username, masterKey)", nativeQuery = true)
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO securekeys (username, master_key) VALUES (:username, :masterKey)", nativeQuery = true)
     void addMasterKey(@Param("username") String username, @Param("masterKey") String masterKey);
     
     @Query(value = "SELECT master_key WHERE username = :username", nativeQuery = true)

@@ -9,9 +9,7 @@ import java.util.UUID;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -22,8 +20,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,13 +39,17 @@ import com.example.PVault.entityClasses.Password;
 import com.example.PVault.entityClasses.User;
 import com.example.PVault.service.AIService;
 import com.example.PVault.service.BackupAndRestoreService;
+import com.example.PVault.service.CustomUserDetailsService;
 import com.example.PVault.service.Encryptor;
 import com.example.PVault.service.MailService;
 import com.example.PVault.service.UserService;
 import com.example.PVault.service.passwordService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import messageQueue.GenerateMasterKeyEventProducer;
+import com.example.PVault.entityClasses.formDetails;
 import security.AuthenticationService;
 import security.OTPService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -82,10 +87,22 @@ public class MainController
 	@Autowired
 	Encryptor encryptor;
 	
+	@Autowired
+	CustomUserDetailsService userDetailsService;
+	
+	@Autowired
+	private PersistentTokenBasedRememberMeServices rememberMeServices;
+	
+	private final GenerateMasterKeyEventProducer generateMasterKeyEventProducer;
 	
 	private static final Logger log = LoggerFactory.getLogger(MainController.class);
 	
 	
+	
+	public MainController(GenerateMasterKeyEventProducer generateMasterKeyEventProducer) 
+	{
+        this.generateMasterKeyEventProducer = generateMasterKeyEventProducer;
+    }
 	
 	@GetMapping("/getHome")
 	public String getHome(HttpServletRequest request)
@@ -118,6 +135,18 @@ public class MainController
 		return "mainPage";
 	}
 	
+	@GetMapping("/getContact")
+	public String getContact()
+	{
+		return "contact";
+	}
+	
+	@GetMapping("/getAboutDeveloper")
+	public String getAboutDeveloper()
+	{
+		return "aboutMe";
+	}
+	
 	@GetMapping("/getPasswordChangeForm")
 	public String getPasswordChangeForm()
 	{
@@ -139,8 +168,11 @@ public class MainController
 	
 	@CircuitBreaker(name = "userRegistrationCB", fallbackMethod = "userRegistrationFallback")
 	@KafkaListener(topics = "user-registration-event", groupId = "user-group")
-	public void userRegistration(User registrationFormData, HttpServletRequest request)
+	public void userRegistration(formDetails formDetails)
 	{
+		User registrationFormData = formDetails.getRegistrationFormData();
+		ArrayList<String> masterKeyList = formDetails.getMasterKeyList();		
+		
 		//check received event
 		System.out.println("Received user details from user event producer: " + registrationFormData);
 		
@@ -150,16 +182,13 @@ public class MainController
 		//Encrypt password
 		String hashedPassword = authService.encrypt(inputPassword);
 		registrationFormData.setPassword(hashedPassword);
-		
-		request.getSession().setAttribute("username", registrationFormData.getUsername());
-		request.getSession().setAttribute("UserID", registrationFormData.getId());
 			
 		//Add to Database
 		userService.addUser(registrationFormData);
+		generateMasterKeyEventProducer.publishGenerateMasterKeyEvent(masterKeyList); //Publish event to generate master key
 	}
 	
-	public ResponseEntity<String> userRegistrationFallback(User registrationFormData, 
-			                                               HttpServletRequest request, Throwable t) 
+	public ResponseEntity<String> userRegistrationFallback(formDetails formDetails, Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later. :)");
@@ -167,12 +196,15 @@ public class MainController
 	
 	@CircuitBreaker(name = "generateMasterKeyCB", fallbackMethod = "generateMasterKeyFallback")
 	@KafkaListener(topics = "generate-master-key-event", groupId = "user-group")
-	public void generateMasterKey(HttpServletRequest request, String username) throws NoSuchAlgorithmException, 
+	public void generateMasterKey(ArrayList<String> masterKeyList) throws NoSuchAlgorithmException, 
 	                                                                                  NoSuchPaddingException, InvalidKeyException, 
 	                                                                                  IllegalBlockSizeException, BadPaddingException
 	{
+		String username = masterKeyList.get(0);
+		String masterKey = masterKeyList.get(1);
+		String AESEncyptionKeyForMasterKey = masterKeyList.get(2);
+		
 		String executionId = UUID.randomUUID().toString();
-	    
 	    int maxRetries = 3;
 	    int retryCount = 0;
 	    int[] backoffTimes = {1000, 2000, 4000}; 
@@ -198,17 +230,7 @@ public class MainController
 	                    Thread.currentThread().interrupt();
 	                    log.warn("Operation interrupted: {}", executionId);
 	                }
-	            }
-	            
-	            request.getSession().setAttribute("username", username);
-	    		String masterKey = UUID.randomUUID().toString().substring(0, 16); // Generate Master key
-	    		
-	    		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-	            keyGen.init(256);
-	            SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
-	            String AESEncyptionKeyForMasterKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-	    		
-	            request.getSession().setAttribute("AESEncyptionKeyForMasterKey", AESEncyptionKeyForMasterKey); //Save the AES key for master key in session
+	            }	    		
 	    		
 	            SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(AESEncyptionKeyForMasterKey), "AES");
 	            Cipher cipher = Cipher.getInstance("AES");
@@ -219,17 +241,22 @@ public class MainController
 	    		passwordService.addMasterKey(username, encryptedMasterKey);   // Save it to DB
 	    		
 	    		String toEmail = username;
-	    		String mailSubject = "Master Key for password backup";
+	    		String mailSubject = "Registration for PVault";
 	    		String mailBody = "Hi " + username
-	    				          + "/n/n"
-	    				          + "Master key is generated and securely stored";
-	    				         
+	    				          + "\n\n"
+	    				          + "You have successfully registered for PVault. "
+	    						  + "A master key has been generated and safely kept for you. "
+	    				          + "(The master key will be used to restore the backed-up passwords)";
+	    						  	    						  
 	    		try 
 	    		{
+	    			System.out.println("Sending email to: " + toEmail);
 	    			mailService.sendEmail(toEmail, mailSubject, mailBody);
 	    		} 
-	    		catch(MessagingException e) 
+	    		catch(Exception e) 
 	    		{
+	    			
+	    			log.warn("Failed to send email to {}", toEmail);
 	    			e.printStackTrace();
 	    		}
 	    		
@@ -253,13 +280,13 @@ public class MainController
 	    
 	    if(success) 
 	    {
-	        log.info("Operation successfull after {} attempts, execution: {}", 
+	        log.info("\n\nOperation successfull after {} attempts, execution: {}", 
 	                retryCount, executionId);
 	    } 
 	  
 	    else 
 	    {
-	        log.error("Operation failed after {} attempts, execution: {}, error: {}", 
+	        log.error("\n\nOperation failed after {} attempts, execution: {}, error: {}", 
 	                 retryCount, executionId, lastException.getMessage());
 	    }
 	}
@@ -274,16 +301,14 @@ public class MainController
 	
 	@CircuitBreaker(name = "addWebsitePasswordCB", fallbackMethod = "addWebsitePasswordFallback")
 	@KafkaListener(topics = "add-website-password-event", groupId = "user-group")
-	public String addWebsitePassword(Password websiteDetailsFormData, HttpServletRequest request)
+	public void addWebsitePassword(Password websiteDetailsFormData)
 	{
-		String username = (String) request.getSession().getAttribute("username");
-		websiteDetailsFormData.setUsername(username);
+		websiteDetailsFormData.setPassword(encryptor.encrypt(websiteDetailsFormData.getPassword()));
 		passwordService.addPassword(websiteDetailsFormData);
-		return "mainPage";
 	}
 	
 	public ResponseEntity<String> addWebsitePasswordFallback(Password websiteDetailsFormData, 
-														   HttpServletRequest request, Throwable t) 
+														     Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");
@@ -303,7 +328,8 @@ public class MainController
 	{
 		String passwordId = (String) request.getSession().getAttribute("ID");
 		String newPassword = passwordDetails.getPassword();
-		passwordService.updatePassword(passwordId, newPassword);
+		String encryptedPassword = encryptor.encrypt(newPassword);
+		passwordService.updatePassword(passwordId, encryptedPassword);
 		return "mainPage";
 	}
 	
@@ -316,10 +342,10 @@ public class MainController
 
 	@PostMapping("/deletePassword")
 	@CircuitBreaker(name = "deletePasswordCB", fallbackMethod = "deletePasswordFallback")
-	public String deletePassword(@RequestParam(name = "password_id") String Id)
+	public String deletePassword(Model model, @RequestParam(name = "password_id") String Id, HttpServletRequest request)
 	{
 		passwordService.deletePassword(Id);
-		return "mainPage";
+		return viewSavedPasswords(model, request);
 	}
 	
 	public ResponseEntity<String> deletePasswordFallback(String Id, Throwable t) 
@@ -336,8 +362,11 @@ public class MainController
 		
 		String username = (String) request.getSession().getAttribute("username");
 		User user = userService.getUser(username);
-		user.setPassword(newPassword);
+		String encryptedNewPassword = authService.encrypt(newPassword);
+		user.setPassword(encryptedNewPassword);
 		userService.addUser(user);
+		
+		userService.updatePasswordHistory(user.getId());
 		
 		String mailSubject = "Password change for PVault";
 		String mailBody = "Your Password have been successfully updated\n"
@@ -357,8 +386,17 @@ public class MainController
 	@CircuitBreaker(name = "viewSavedPasswordsCB", fallbackMethod = "viewSavedPasswordsFallback")
 	public String viewSavedPasswords(Model model, HttpServletRequest request)
 	{
-		String username = (String) request.getSession().getAttribute("username");
-		List<Password> passwordList = passwordService.getAllPasswords(username);
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		List<Password> encryptedPasswordList = passwordService.getAllPasswords(username);
+		List<Password> passwordList = new ArrayList<>();
+		
+		for(Password p : encryptedPasswordList)
+		{
+			String decryptedPassword = encryptor.decrypt(p.getPassword());
+			p.setPassword(decryptedPassword);
+			passwordList.add(p);
+		}
+		
 		model.addAttribute("passwordList", passwordList);  // Add the list to the model
         return "viewPasswords";
 	}
@@ -548,7 +586,7 @@ public class MainController
 	@PostMapping("/userLogin")
 	@CircuitBreaker(name = "userLoginCB", fallbackMethod = "userLoginFallback")
 	public String userLogin(@ModelAttribute User userLoginFormData, HttpServletRequest request, 
-			                @RequestParam("otp") String otp)
+			                HttpServletResponse response, @RequestParam("otp") String otp)
 	{
 		String userReq = userLoginFormData.getUsername();
 		User u = userService.getUser(userReq);
@@ -560,7 +598,17 @@ public class MainController
 		
 		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP))
 		{
-			request.getSession().setAttribute("username", u.getUsername());
+			request.getSession().setAttribute("username", userReq);
+			
+			UserDetails userDetails = userDetailsService.loadUserByUsername(userReq);
+	        UsernamePasswordAuthenticationToken auth =
+	            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+	        // Set security context
+	        SecurityContextHolder.getContext().setAuthentication(auth);
+
+	        // Trigger remember-me manually
+	        rememberMeServices.loginSuccess(request, response, auth);
 			return "vaultOTP";
 		}
 		
@@ -577,7 +625,7 @@ public class MainController
 			   body("Service is temporarily unavailable. Please try again later. :)");  //Fallback method
 	}
 	
-	@GetMapping("/forgotPassword")
+	@PostMapping("/forgotPassword")
 	public String forgotPassword(@RequestParam("username") String username, HttpServletRequest request)
 	{
 		request.getSession().setAttribute("username", username);
@@ -588,7 +636,6 @@ public class MainController
 					    "Hi,\n\n" +
 					    "We received a request to reset your PVault password. Please click the link below to reset it:\n\n" +
 					    resetLink + "\n\n" +
-					    "This link will expire in 30 minutes.\n\n" +
 					    "If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.\n\n" +
 					    "Thanks,\nThe PVault Team";
 		
@@ -605,17 +652,20 @@ public class MainController
 	}
 	
 	@PostMapping("/passwordChange")
-	public ResponseEntity<?> passwordChange(@RequestParam("newPassword") String newPassword, HttpServletRequest request)
+	public String passwordChange(@RequestParam("newPassword") String newPassword, HttpServletRequest request, Model model)
 	{
 		String username = (String) request.getSession().getAttribute("username");
 		User user = userService.getUser(username);
 		String oldPassword = user.getPassword();
 		
-		if(!newPassword.isEmpty() && authenticationService.authenticate(newPassword, oldPassword))
+		if(!newPassword.isEmpty() && !authenticationService.authenticate(newPassword, oldPassword))
 		{
 			String hashedPassword = authenticationService.encrypt(newPassword);
 			user.setPassword(hashedPassword);
 			userService.addUser(user);
+			
+			userService.updatePasswordHistory(user.getId());
+			
 			
 			String mailSubject = "Password change for PVault";
 			String mailBody = "Your Password have been successfully updated\n"
@@ -630,12 +680,13 @@ public class MainController
 				e.printStackTrace();
 			}
 			
-			return ResponseEntity.ok().body("homePage");
+			return "homePage";
 		}
 		
 		else
 		{
-			return ResponseEntity.ok().body("Password change failed: new password same as old password");
+			 model.addAttribute("errorMessage", "Password change failed: new password is same as the old password.");
+		        return "passwordChangeForm";
 		}
 	}
 
@@ -648,7 +699,7 @@ public class MainController
 	    {
 	        session.invalidate(); // Invalidate the session
 	    }
-	    return "redirect:/homePage";		
+	    return "homePage";		
 	}
 	
 	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback") //Circuit breaker

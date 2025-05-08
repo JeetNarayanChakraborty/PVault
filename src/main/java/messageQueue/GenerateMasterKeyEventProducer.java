@@ -1,23 +1,23 @@
 package messageQueue;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.ArrayList;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 
-
-
-@RestController
-@RequestMapping("/queue")
+@Service
 public class GenerateMasterKeyEventProducer 
 {
-	@Autowired
-	private KafkaTemplate<String, String> kafkaTemplate;
+	private KafkaTemplate<String, ArrayList<String>> kafkaTemplate;
 	
-	@RequestMapping("/generateMasterKey")
-	public void publishGenerateMasterKeyEvent(@RequestParam("hiddenField") String username) 
+    public GenerateMasterKeyEventProducer(KafkaTemplate<String, ArrayList<String>> kafkaTemplate) 
+    {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+	
+	public ResponseEntity<String> publishGenerateMasterKeyEvent(ArrayList<String> masterKeyList) 
 	{
-	     kafkaTemplate.send("generate-master-key-event", username);
+		kafkaTemplate.send("generate-master-key-event", masterKeyList);
+	    return ResponseEntity.ok("Generate Master Key event published successfully for user: " + masterKeyList.get(0));
 	}
 }

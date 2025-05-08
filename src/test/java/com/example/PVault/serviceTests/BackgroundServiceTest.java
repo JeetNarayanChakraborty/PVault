@@ -65,7 +65,7 @@ public class BackgroundServiceTest
         userID = "1";
         username = "testUser";
         user = new User();
-        user.setId(Long.parseLong(userID));
+        user.setId(userID);
         user.setUsername(username);
 
         when(session.getAttribute("userID")).thenReturn(userID);
