@@ -81,21 +81,24 @@ public class BackgroundService
 		}
 	}
 	
-	@Scheduled(fixedRate = 604800000) // Runs every 7 days
+	@Scheduled(fixedRate = 60000) // Runs every 7 days
     public void scheduleBackup() 
 	{
-		String userID = (String) session.getAttribute("userID");
-		User u = userService.getUserById(userID);
-        try 
-        {
-			backupAndRestoreService.backupUserSavedPasswords(u.getUsername());
-		} 
-        
-        catch(InvalidKeyException e) {e.printStackTrace();} 
-        catch(IllegalBlockSizeException e) {e.printStackTrace();} 
-        catch(BadPaddingException e) {} 
-        catch(NoSuchAlgorithmException e) {e.printStackTrace();} 
-        catch(NoSuchPaddingException e) {e.printStackTrace();}
+		List<User> users = userService.getAllUsers();
+			
+		for(User u : users)
+		{
+	        try 
+	        {
+				backupAndRestoreService.backupUserSavedPasswords(u.getUsername());
+			} 
+	        
+	        catch(InvalidKeyException e) {e.printStackTrace();} 
+	        catch(IllegalBlockSizeException e) {e.printStackTrace();} 
+	        catch(BadPaddingException e) {} 
+	        catch(NoSuchAlgorithmException e) {e.printStackTrace();} 
+	        catch(NoSuchPaddingException e) {e.printStackTrace();}
+		}
     }
 }
 

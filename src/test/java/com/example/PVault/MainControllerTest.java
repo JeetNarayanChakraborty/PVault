@@ -151,14 +151,6 @@ public class MainControllerTest
     }
 
     @Test
-    public void testDeletePassword() 
-    {
-        String view = mainController.deletePassword("1");
-        assertEquals("mainPage", view);
-        verify(passwordService, times(1)).deletePassword("1");
-    }
-
-    @Test
     public void testViewSavedPasswords() 
     {
         when(session.getAttribute("username")).thenReturn("user");

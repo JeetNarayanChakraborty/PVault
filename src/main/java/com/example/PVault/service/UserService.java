@@ -1,5 +1,7 @@
 package com.example.PVault.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.example.PVault.entityClasses.User;
@@ -22,6 +24,11 @@ public class UserService
     {
     	return userRepository.findByUsername(username);  //Get user
     }
+    
+    public List<User> getAllUsers() 
+	{
+		return userRepository.findAll(); // Get all users
+	}
     
     public User getUserById(String userID)
     {

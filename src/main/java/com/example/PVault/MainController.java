@@ -173,9 +173,6 @@ public class MainController
 		User registrationFormData = formDetails.getRegistrationFormData();
 		ArrayList<String> masterKeyList = formDetails.getMasterKeyList();		
 		
-		//check received event
-		System.out.println("Received user details from user event producer: " + registrationFormData);
-		
 		//Take password input
 		String inputPassword = registrationFormData.getPassword();
 		
@@ -183,8 +180,11 @@ public class MainController
 		String hashedPassword = authService.encrypt(inputPassword);
 		registrationFormData.setPassword(hashedPassword);
 			
-		//Add to Database
+		//Add user to Database
 		userService.addUser(registrationFormData);
+		
+		passwordService.addAESEncryptionKeyForMasterKey(registrationFormData.getUsername(), masterKeyList.get(2)); //Save the AES key for master key in DB
+		
 		generateMasterKeyEventProducer.publishGenerateMasterKeyEvent(masterKeyList); //Publish event to generate master key
 	}
 	

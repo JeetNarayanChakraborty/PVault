@@ -20,6 +20,8 @@ import com.example.PVault.entityClasses.formDetails;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import com.example.PVault.service.passwordService;
+
 
 @Controller
 @RequestMapping("/queue")
@@ -27,6 +29,9 @@ public class UserRegistrationEventProducer
 {
     @Autowired
     private KafkaTemplate<String, formDetails> kafkaTemplate;
+    
+    @Autowired
+    private passwordService passwordService;
 	
 	
     @PostMapping("/userRegistration")
@@ -48,8 +53,6 @@ public class UserRegistrationEventProducer
         keyGen.init(256);
         SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
         String AESEncyptionKeyForMasterKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-		
-        request.getSession().setAttribute("AESEncyptionKeyForMasterKey", AESEncyptionKeyForMasterKey); //Save the AES key for master key in session
     	
     	ArrayList<String> masterKeyList = new ArrayList<>(
 			              Arrays.asList(username, masterKey, AESEncyptionKeyForMasterKey));

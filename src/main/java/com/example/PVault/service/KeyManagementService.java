@@ -17,21 +17,33 @@ import jakarta.servlet.http.HttpSession;
 @Service
 public class KeyManagementService 
 {
-	private static HttpSession session;
 	static passwordService passwordService;
 	
 
-	public KeyManagementService(HttpSession session, passwordService passwordService) 
+	public KeyManagementService(passwordService passwordService) 
 	{
-	    this.session = session;
 	    this.passwordService = passwordService;
 	}
 	
 	public String getUserMasterKey(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 	                                                        BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
-		String keytoDecryptMasterKey = (String) session.getAttribute("AESEncryptionKeyForMasterKey");
+		String keytoDecryptMasterKey = passwordService.getAESEncryptionKeyForMasterKey(username);
 		String encryptedMasterKey = passwordService.getMasterKey(username);
+		
+		if(keytoDecryptMasterKey == null) 
+		{
+	        throw new IllegalStateException("key to decrypt master key is missing for user: " + username);
+	    }
+		
+		if(encryptedMasterKey == null)
+		{
+	        throw new IllegalStateException("Encrypted master key is missing for user: " + username);
+	    }
+		
+		
+		
+		
 		
 		SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(keytoDecryptMasterKey), "AES");
         Cipher cipher = Cipher.getInstance("AES");
@@ -40,3 +52,7 @@ public class KeyManagementService
         return new String(decryptedBytes);
 	}
 }
+
+
+
+

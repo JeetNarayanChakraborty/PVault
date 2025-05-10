@@ -150,6 +150,16 @@ public class passwordService
     {
     	return PasswordRepository.getMasterKeyByUsername(username);
     }
+    
+    public void addAESEncryptionKeyForMasterKey(String username, String key)
+	{
+		PasswordRepository.addAESEncryptionKeyForMasterKey(username, key);
+	}
+    
+    public String getAESEncryptionKeyForMasterKey(String username)
+	{
+		return PasswordRepository.getAESEncryptionKeyForMasterKey(username);
+	}
 }
 
 

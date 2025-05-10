@@ -88,22 +88,6 @@ public class BackupAndRestoreService
         
         passwordService.addUserBackup(user.getId(), encryptedData); // Save backup to DB
 
-        String userKey = Base64.getEncoder().encodeToString(secretKey.getEncoded()); // Convert SecretKey to String
-        
-        String toEmail = username;
-        String mailSubject = "Master Key for password backup on " + java.time.LocalDate.now().toString();
-        String mailBody = "Hi " + username 
-  		      			   + "\n\n\n"
-  		      			   + "Master Key :" + userKey
-  		      			   + "\n\n"
-  		      			   + "Please note down this key. This will be needed to restore backup if any accidental changes occours";
-        
-        try 
-        {
-			mailService.sendEmail(toEmail, mailSubject, mailBody);
-		} 
-        catch (MessagingException e) {}
-
         // Key Deletion from Server
         secretKey = null;
 	}
