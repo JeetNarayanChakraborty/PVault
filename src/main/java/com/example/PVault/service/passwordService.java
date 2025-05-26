@@ -41,8 +41,7 @@ public class passwordService
 	                // Wait before retry
 	                try 
 	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
+	                    Thread.sleep(backoffTimes[retryCount - 1]);    
 	                } 
 	                
 	                catch(InterruptedException ie) 
@@ -160,6 +159,11 @@ public class passwordService
 	{
 		return PasswordRepository.getAESEncryptionKeyForMasterKey(username);
 	}
+    
+    public void deleteOldBackups(String userID)
+    {
+    	PasswordRepository.deleteOldBackupsBeyondLimit(userID);
+    }
 }
 
 

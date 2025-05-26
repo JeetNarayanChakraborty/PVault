@@ -117,6 +117,12 @@ public class MainController
 		return "homePage";
 	}
 	
+	@GetMapping("/getHomeAfterSessionInvalidation")
+	public String getHomeAfterSessionInvalidation()
+	{
+		return "homePage";
+	}
+	
 	@GetMapping("/getRegistration")
 	public String getRegistration()
 	{
@@ -292,8 +298,7 @@ public class MainController
 	}
 	
 	
-	public ResponseEntity<String> generateMasterKeyFallback(User registrationFormData, String username, 
-															Throwable t) 
+	public ResponseEntity<String> generateMasterKeyFallback(ArrayList<String> masterKeyList, Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");
@@ -348,7 +353,7 @@ public class MainController
 		return viewSavedPasswords(model, request);
 	}
 	
-	public ResponseEntity<String> deletePasswordFallback(String Id, Throwable t) 
+	public ResponseEntity<String> deletePasswordFallback(Model model, String Id, HttpServletRequest request, Throwable t) 
 	{
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 				body("Service is temporarily unavailable. Please try again later.");
@@ -409,25 +414,24 @@ public class MainController
 	}
 	
 	@KafkaListener(topics = "view-deleted-passwords-event", groupId = "user-group")
-	public String viewDeletedPasswords(Model model, HttpServletRequest request, String event)
+	public void viewDeletedPasswords(String user)
 	{
-		String username = (String) request.getSession().getAttribute("username");
+		String username = user;
 		List<Password> userDeletedPasswords = new ArrayList<Password>();
-		
-		try 
-		{
-			userDeletedPasswords = backupAndRestoreService.restoreUserSavedPasswords(username);
-		} 
-		catch (Exception e) { e.printStackTrace(); }
-		
-		model.addAttribute("deletedPasswordList", userDeletedPasswords);
-		return "restoredPasswords";
 	}
 		
 	@KafkaListener(topics = "restore-password-event", groupId = "user-group")
 	public void restorePassword(Password userPassword)
-	{		
-		passwordService.addPassword(userPassword);
+	{	
+		try
+		{
+			passwordService.addPassword(userPassword);
+		}
+		
+		catch(Exception e)
+		{
+			System.out.println("Error in restoring password: " + e.getMessage());
+		}
 	}
 	
 	@CircuitBreaker(name = "sendOTPCB", fallbackMethod = "sendOTPFallback")
@@ -501,8 +505,7 @@ public class MainController
 		return "homePage";
 	}
 	
-	public ResponseEntity<String> sendOTPFallback(User registrationFormData, HttpServletRequest request, 
-			                                      Throwable t) 
+	public ResponseEntity<String> sendOTPFallback(ArrayList<String> emailDetails, Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");
@@ -577,7 +580,7 @@ public class MainController
 	    }
 	}
 	
-	public ResponseEntity<String> sendUserLoginOTPFallback(HttpServletRequest request, String username, Throwable t) 
+	public ResponseEntity<String> sendUserLoginOTPFallback(ArrayList<String> emailDetails, Throwable t) 
 	{
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 				body("Service is temporarily unavailable. Please try again later. :)");
@@ -619,7 +622,8 @@ public class MainController
 	}
 	
 	public ResponseEntity<String> userLoginFallback(User userLoginFormData, 
-            										HttpServletRequest request, String otp, Throwable t) 
+            										HttpServletRequest request, 
+            										HttpServletResponse response, String otp, Throwable t) 
 	{
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 			   body("Service is temporarily unavailable. Please try again later. :)");  //Fallback method
@@ -686,7 +690,7 @@ public class MainController
 		else
 		{
 			 model.addAttribute("errorMessage", "Password change failed: new password is same as the old password.");
-		        return "passwordChangeForm";
+		     return "passwordChangeForm";
 		}
 	}
 
@@ -699,6 +703,7 @@ public class MainController
 	    {
 	        session.invalidate(); // Invalidate the session
 	    }
+	    
 	    return "homePage";		
 	}
 	
@@ -772,7 +777,7 @@ public class MainController
 	    }	
 	}
 	
-	public ResponseEntity<String> sendUserVaultOTPFallback(HttpServletRequest request, Throwable t) 
+	public ResponseEntity<String> sendUserVaultOTPFallback(ArrayList<String> emailDetails, Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");

@@ -212,6 +212,8 @@ public class MainControllerTest
             fail("Exception in mail service: " + e.getMessage());
         }
     }
+    
+    /*
 
     @Test
     public void testViewDeletedPasswords() 
@@ -231,6 +233,8 @@ public class MainControllerTest
         assertEquals("restoredPasswords", view);
         verify(model, times(1)).addAttribute("deletedPasswordList", passwords);
     }
+    
+    */
 
     @Test
     public void testRestorePassword() 

@@ -152,7 +152,7 @@
         }
     </style>
 </head>
-<body>
+    <body>
         <div class="container">
             <div class="logo">P Vault</div>
             <div class="tagline">A reliable way of storing credentials</div>
@@ -168,5 +168,47 @@
                 </div>
             </div>
         </div>
-</body>
+    </body>
+    <script>
+
+        let logoutTimer;
+        const TIMEOUT = 60000; // 5 minute
+
+        function resetTimer() 
+        {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(() => 
+            {
+                performLogout();
+            }, TIMEOUT);
+        }
+
+        async function performLogout() 
+        {
+            try 
+            {             
+                await fetch('/invalidate-session', // Call server to invalidate session and clear remember-me
+                {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } 
+            catch(error) 
+            {
+                console.error('Logout error:', error);
+            } 
+
+            finally 
+            {   
+                window.location.href = '/main/getHome?sessionExpired=true';  // Redirect to trigger your existing alert
+            }
+        }
+
+        document.addEventListener('mousemove', resetTimer); // Reset timer on user activity
+        document.addEventListener('keypress', resetTimer);
+        document.addEventListener('click', resetTimer);
+        document.addEventListener('scroll', resetTimer);
+       
+        resetTimer(); // Start timer when page loads
+    </script>
 </html>

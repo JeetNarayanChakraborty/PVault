@@ -10,11 +10,13 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.PVault.entityClasses.User;
-
+import com.example.PVault.service.passwordService;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -39,6 +41,12 @@ public class BackgroundService
 	
 	@Autowired
 	BackupAndRestoreService backupAndRestoreService;
+	
+	@Autowired
+	passwordService passwordService;
+	
+	@Autowired
+    private JdbcTemplate jdbcTemplate;
 	
 	
 	public List<String> fetchData() 
@@ -81,7 +89,7 @@ public class BackgroundService
 		}
 	}
 	
-	@Scheduled(fixedRate = 60000) // Runs every 7 days
+	@Scheduled(fixedRate = 604800000)     // Runs every 7 days
     public void scheduleBackup() 
 	{
 		List<User> users = userService.getAllUsers();
@@ -100,7 +108,28 @@ public class BackgroundService
 	        catch(NoSuchPaddingException e) {e.printStackTrace();}
 		}
     }
+	
+	@Scheduled(fixedRate = 604800000)     // Runs every 7 days
+	public void cleanupPasswordBackup()
+	{
+		List<User> users = userService.getAllUsers();
+		
+		for(User u : users)
+		{
+			String userID = u.getId();
+			passwordService.deleteOldBackups(userID);
+		}
+	}
 }
+
+
+
+
+
+
+
+
+
 
 
 

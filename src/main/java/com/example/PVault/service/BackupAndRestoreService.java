@@ -26,6 +26,7 @@ import com.example.PVault.entityClasses.User;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.mail.MessagingException;
+import com.example.PVault.service.Encryptor;
 
 
 
@@ -43,6 +44,9 @@ public class BackupAndRestoreService
 	
 	@Autowired
 	KeyManagementService keyManagementService;
+	
+	@Autowired
+	Encryptor encryptor;
 
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 	
@@ -144,14 +148,20 @@ public class BackupAndRestoreService
         {
         	if(allLastSevenWeeksUserPasswords.containsKey(ID)) // Compares user's current passwords with all past seven weeks passwords
         	{
-        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all-password store, those who remains are deleted before
+        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all-password store, those who remains were deleted before
         	}
         }
            
         for(Entry<String, pwd> map : allLastSevenWeeksUserPasswords.entrySet()) 
     	{
             String passwordID = map.getKey();
-            userDeletedPasswords.add(passwordService.getPasswordByID(passwordID));
+            String user = username;
+            String websiteName = map.getValue().getWebsiteName();
+            String password = map.getValue().getPassword();
+            
+            Password restoredPassword = new Password(passwordID, user, websiteName, password); // again create a password object from restored password
+            
+            userDeletedPasswords.add(restoredPassword); // Add to the list of deleted passwords
     	}
         
         return userDeletedPasswords; // Return the list of deleted passwords

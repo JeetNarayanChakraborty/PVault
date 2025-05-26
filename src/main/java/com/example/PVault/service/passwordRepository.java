@@ -28,7 +28,7 @@ public interface passwordRepository extends JpaRepository<Password, String>
     @Query(value = "INSERT INTO password_backup (userID, backup, time_stamp) VALUES (:userID, :backup, CURRENT_TIMESTAMP)", nativeQuery = true)
     void addBackup(@Param("userID") String userID, @Param("backup") String backup);
     
-    @Query(value = "SELECT backup FROM password_backup WHERE ID = :userID", nativeQuery = true)
+    @Query(value = "SELECT backup FROM password_backup WHERE userID = :userID", nativeQuery = true)
     List<String> getBackup(@Param("userID") String userID);
     
     @Modifying
@@ -48,6 +48,23 @@ public interface passwordRepository extends JpaRepository<Password, String>
     String getAESEncryptionKeyForMasterKey(@Param("username") String username);
     
 	void deleteById(String ID);
+	
+	@Modifying
+	@Transactional
+	@Query(value = """
+	DELETE FROM password_backup 
+	WHERE userID = :userId 
+	AND time_stamp NOT IN (
+	    SELECT time_stamp FROM (
+	        SELECT time_stamp
+	        FROM password_backup 
+	        WHERE userID = :userId 
+	        ORDER BY time_stamp DESC 
+	        LIMIT 7
+	    ) AS latest_records
+	)
+	""", nativeQuery = true)
+	int deleteOldBackupsBeyondLimit(@Param("userId") String userId);
 }
 
 
