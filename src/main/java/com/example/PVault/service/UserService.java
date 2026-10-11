@@ -1,11 +1,10 @@
 package com.example.PVault.service;
 
-import java.util.List;
-
+import com.example.PVault.entityClasses.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.example.PVault.entityClasses.User;
-import com.example.PVault.service.userRepository;
+
+import java.util.List;
 
 
 @Service
@@ -15,25 +14,13 @@ public class UserService
     private userRepository userRepository;
 
 
-    public void addUser(User user) 
-    {
-        userRepository.save(user); // Save user
-    }
+    public void addUser(User user) { userRepository.save(user); } // Add user
     
-    public User getUser(String username)
-    {
-    	return userRepository.findByUsername(username);  //Get user
-    }
+    public User getUser(String username) { return userRepository.findByUsername(username); }
     
-    public List<User> getAllUsers() 
-	{
-		return userRepository.findAll(); // Get all users
-	}
+    public List<User> getAllUsers() { return userRepository.findAll(); } // Get all users
     
-    public User getUserById(String userID)
-    {
-    	return userRepository.findById(userID);
-    }
+    public User getUserById(String userID) { return userRepository.findById(userID); }
     
     public void updateUser(String username, String UpdatedPassword)
     {

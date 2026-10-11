@@ -1,27 +1,22 @@
 package com.example.PVault.service;
 
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-
+import com.example.PVault.entityClasses.User;
+import jakarta.mail.MessagingException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.example.PVault.entityClasses.User;
-import com.example.PVault.service.passwordService;
-import jakarta.mail.MessagingException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.TypedQuery;
-import jakarta.servlet.http.HttpSession;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Service
@@ -82,10 +77,7 @@ public class BackgroundService
 				mailService.sendEmail(username, mailSubject, mailBody);
 			} 
 		    
-		    catch(MessagingException e) 
-		    {
-				e.printStackTrace();
-			}
+		    catch(MessagingException e) { e.printStackTrace(); }
 		}
 	}
 	
@@ -99,13 +91,11 @@ public class BackgroundService
 	        try 
 	        {
 				backupAndRestoreService.backupUserSavedPasswords(u.getUsername());
-			} 
-	        
-	        catch(InvalidKeyException e) {e.printStackTrace();} 
-	        catch(IllegalBlockSizeException e) {e.printStackTrace();} 
-	        catch(BadPaddingException e) {} 
-	        catch(NoSuchAlgorithmException e) {e.printStackTrace();} 
-	        catch(NoSuchPaddingException e) {e.printStackTrace();}
+			}
+
+			catch(InvalidKeyException | IllegalBlockSizeException |
+				  NoSuchAlgorithmException | BadPaddingException |
+				  NoSuchPaddingException e) { e.printStackTrace(); }
 		}
     }
 	

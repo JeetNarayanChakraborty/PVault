@@ -29,18 +29,13 @@ public class SessionController
     {
         try 
         {
-            HttpSession session = request.getSession(false); // Get current session
-            if (session != null) 
-            {
-                session.invalidate();
-            }
-            
+            HttpSession session = request.getSession(false);// Get current session
+
+            if(session != null) session.invalidate();
+
             Authentication auth = SecurityContextHolder.getContext().getAuthentication(); // Clear remember-me token from database
             
-            if(auth != null)  
-            {
-                rememberMeServices.logout(request, response, auth);
-            }
+            if(auth != null) rememberMeServices.logout(request, response, auth);
                         
             Cookie rememberMeCookie = new Cookie("remember-me", null); // Manually clear remember-me cookie
             rememberMeCookie.setPath("/");

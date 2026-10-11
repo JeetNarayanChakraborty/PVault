@@ -1,92 +1,78 @@
 package com.example.PVault.service;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
 import com.example.PVault.entityClasses.Password;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 @Service
 public class passwordService 
 {
 	private final Logger log = LoggerFactory.getLogger(passwordService.class);
+	private final ExecutorService executor = Executors.newFixedThreadPool(10);
 	
 	@Autowired
 	passwordRepository PasswordRepository;
 	
 	@Autowired
 	Encryptor encryptor;
-	
-	@Async
-	public CompletableFuture<Void> addPassword(Password password) 
-	{
-	    String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
-	    boolean success = false;
-	    Exception lastException = null;
 
-	    while(retryCount <= maxRetries && !success) 
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                // Wait before retry
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                    return CompletableFuture.completedFuture(null);
-	                }
-	            }
-	            
-	            // Encrypt the password before saving
-	            password.setPassword(encryptor.encrypt(password.getPassword()));
-	            
-	            // Attempt to save the password
-	            PasswordRepository.save(password);
-	            success = true;
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) 
-	    {
-	        log.info("Successfully saved password after {} attempts, execution: {}", 
-	                retryCount, executionID);
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed to save password after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
-	    }
-	    
-	    return CompletableFuture.completedFuture(null);
+	public CompletableFuture<Void> addPassword(Password password)
+	{
+		CompletableFuture<Void> asyncResult = new CompletableFuture<>();
+
+		executor.submit(() ->
+		{
+			String executionID = UUID.randomUUID().toString();
+			int maxRetries = 3;
+			int retryCount = 0;
+			int[] backoffTimes = {1000, 2000, 4000};
+
+			while(true)
+			{
+				try
+				{
+					if(retryCount > 0)
+					{
+						// Blocks the background thread only
+						Thread.sleep(backoffTimes[retryCount - 1]);
+					}
+
+					// Encrypt and Save
+					password.setPassword(encryptor.encrypt(password.getPassword()));
+					PasswordRepository.save(password);
+
+					// SUCCESS: Manually complete the future
+					asyncResult.complete(null);
+					return null;
+				}
+
+				catch(Exception e)
+				{
+					retryCount++;
+
+					if(retryCount > maxRetries)
+					{
+						// FAILURE: Manually fail the future
+						asyncResult.completeExceptionally(e);
+						return null;
+					}
+				}
+			}
+		});
+
+		// Return immediately so the main thread is not blocked
+		return asyncResult;
 	}
-	
-	
+
 	public Password getPasswordByID(String ID)
 	{
 		Password password = PasswordRepository.findPasswordDetailsById(ID);

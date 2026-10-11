@@ -1,25 +1,16 @@
 package com.example.PVault.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.*;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.stereotype.Service;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URL;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.stereotype.Service;
-
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import java.io.IOException;
 
 
 @Service
@@ -37,74 +28,52 @@ public class AIService
 	    return reader.lines().anyMatch(line -> line.startsWith(suffix));
 	}
 
-	public String analyzePasswordWithAI(String password) throws IOException 
+	public String analyzePasswordWithAI(String password) throws IOException
 	{
-	    OkHttpClient client = new OkHttpClient();
-	    ObjectMapper objectMapper = new ObjectMapper();
+		OkHttpClient client = new OkHttpClient();
+		ObjectMapper objectMapper = new ObjectMapper();
 
-	    String apiKey = "tgp_v1_YaGw6xsozJ6OHXVvue79pH3txEjMQMdLBgNe6NGtQO8";
-	    String endpoint = "https://api.together.xyz/v1/chat/completions";
+		String apiKey = "tgp_v1_YaGw6xsozJ6OHXVvue79pH3txEjMQMdLBgNe6NGtQO8";
+		String endpoint = "https://api.together.xyz/v1/chat/completions";
 
-	    // Create the messages array for chat completions
-	    ArrayNode messagesArray = objectMapper.createArrayNode();
-	    ObjectNode systemMessage = objectMapper.createObjectNode();
-	    systemMessage.put("role", "system");
-	    systemMessage.put("content", "You are a security expert AI that reviews passwords.");
-	    
-	    ObjectNode userMessage = objectMapper.createObjectNode();
-	    userMessage.put("role", "user");
-	    userMessage.put("content", "Analyze this password for security risks in 3 lines compact: " + password);
-	    
-	    messagesArray.add(systemMessage);
-	    messagesArray.add(userMessage);
+		// Build the request body as a JSON text block
+		String requestJson = """
+        {
+        	"model": "mistralai/Mistral-7B-Instruct-v0.2",
+        	"messages": [
+				{"role": "system", "content": "You are a security expert AI that reviews passwords."},
+				{"role": "user", "content": "Analyze this password for security risks in 3 lines compact: %s"}
+			  ],
+			"max_tokens": 150,
+			"temperature": 0.5
+        }
+       \s""".formatted(password);
 
-	    // Build the request body
-	    ObjectNode requestJson = objectMapper.createObjectNode();
-	    requestJson.put("model", "mistralai/Mistral-7B-Instruct-v0.2");
-	    requestJson.set("messages", messagesArray);
-	    requestJson.put("max_tokens", 150);
-	    requestJson.put("temperature", 0.5);
+		RequestBody body = RequestBody.create(requestJson,
+				                              MediaType.parse("application/json"));
 
-	    RequestBody body = RequestBody.create(
-	        requestJson.toString(),
-	        MediaType.parse("application/json")
-	    );
+		Request request = new Request.Builder()
+				          .url(endpoint)
+				          .addHeader("Authorization", "Bearer " + apiKey)
+				  		  .addHeader("Content-Type", "application/json")
+						  .post(body)
+						  .build();
 
-	    Request request = new Request.Builder()
-	        .url(endpoint)
-	        .addHeader("Authorization", "Bearer " + apiKey)
-	        .addHeader("Content-Type", "application/json")
-	        .post(body)
-	        .build();
+		try(Response response = client.newCall(request).execute())
+		{
+			if(!response.isSuccessful())
+			{
+				throw new IOException("Unexpected code: " + response);
+			}
 
-	    try(Response response = client.newCall(request).execute()) 
-	    {
-	        if(!response.isSuccessful()) 
-	        {
-	            throw new IOException("Unexpected code: " + response);
-	        }
+			JsonNode contentNode = objectMapper
+					.readTree(response.body().string())
+					.path("choices").path(0).path("message").path("content");
 
-	        String jsonResponse = response.body().string();
-	        JsonNode root = objectMapper.readTree(jsonResponse);
-	        JsonNode choicesNode = root.get("choices");
-
-	        if(choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) 
-	        {
-	            JsonNode messageNode = choicesNode.get(0).get("message");
-	            
-	            if(messageNode != null && !messageNode.isNull()) 
-	            {
-	                JsonNode contentNode = messageNode.get("content");
-	                
-	                if(contentNode != null && !contentNode.isNull()) 
-	                {
-	                    return contentNode.asText().trim();
-	                }
-	            }
-	        }
-
-	        return "No analysis could be generated by the AI.";
-	    }
+			return contentNode.isMissingNode() || contentNode.isNull()
+					? "No analysis could be generated by the AI."
+					: contentNode.asText().trim();
+		}
 	}
 }
 

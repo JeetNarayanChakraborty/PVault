@@ -1,11 +1,11 @@
 package com.example.PVault.entityClasses;
 
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import java.util.UUID;
 
 
 
@@ -18,6 +18,7 @@ public class Password
 	private String id;
 	
 	@Column(name = "username")
+
 	private String username;
 	
 	@Column(name = "domainname")

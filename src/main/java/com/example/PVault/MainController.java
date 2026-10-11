@@ -1,18 +1,17 @@
 package com.example.PVault;
 
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.SecretKeySpec;
-
+import com.example.PVault.entityClasses.Password;
+import com.example.PVault.entityClasses.User;
+import com.example.PVault.entityClasses.formDetails;
+import com.example.PVault.service.*;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import messageQueue.GenerateMasterKeyEventProducer;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,32 +26,20 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-
-import com.example.PVault.entityClasses.Password;
-import com.example.PVault.entityClasses.User;
-import com.example.PVault.service.AIService;
-import com.example.PVault.service.BackupAndRestoreService;
-import com.example.PVault.service.CustomUserDetailsService;
-import com.example.PVault.service.Encryptor;
-import com.example.PVault.service.MailService;
-import com.example.PVault.service.UserService;
-import com.example.PVault.service.passwordService;
-import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import messageQueue.GenerateMasterKeyEventProducer;
-import com.example.PVault.entityClasses.formDetails;
+import org.springframework.web.bind.annotation.*;
 import security.AuthenticationService;
 import security.OTPService;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.InvalidKeyException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 
 
@@ -74,9 +61,6 @@ public class MainController
 	
 	@Autowired
 	MailService mailService;
-	
-	@Autowired
-	BackupAndRestoreService backupAndRestoreService;
 	
 	@Autowired
 	AuthenticationService authenticationService;
@@ -202,9 +186,9 @@ public class MainController
 	
 	@CircuitBreaker(name = "generateMasterKeyCB", fallbackMethod = "generateMasterKeyFallback")
 	@KafkaListener(topics = "generate-master-key-event", groupId = "user-group")
-	public void generateMasterKey(ArrayList<String> masterKeyList) throws NoSuchAlgorithmException, 
-	                                                                                  NoSuchPaddingException, InvalidKeyException, 
-	                                                                                  IllegalBlockSizeException, BadPaddingException
+	public void generateMasterKey(ArrayList<String> masterKeyList) throws NoSuchPaddingException,
+																	      InvalidKeyException, IllegalBlockSizeException,
+			                                                              BadPaddingException
 	{
 		String username = masterKeyList.get(0);
 		String masterKey = masterKeyList.get(1);
@@ -219,7 +203,7 @@ public class MainController
 	    
 	    log.info("Starting operation: {}", executionId);
 
-	    while(retryCount <= maxRetries && !success) 
+	    while(!success)
 	    {
 	        try 
 	        {
@@ -258,12 +242,13 @@ public class MainController
 	    		{
 	    			System.out.println("Sending email to: " + toEmail);
 	    			mailService.sendEmail(toEmail, mailSubject, mailBody);
-	    		} 
+	    		}
+
 	    		catch(Exception e) 
 	    		{
 	    			
 	    			log.warn("Failed to send email to {}", toEmail);
-	    			e.printStackTrace();
+	    			log.debug("Exception details:", e);
 	    		}
 	    		
 	            success = true;
@@ -286,7 +271,7 @@ public class MainController
 	    
 	    if(success) 
 	    {
-	        log.info("\n\nOperation successfull after {} attempts, execution: {}", 
+	        log.info("\n\nOperation successfully after {} attempts, execution: {}",
 	                retryCount, executionId);
 	    } 
 	  
@@ -360,7 +345,7 @@ public class MainController
 	}
 	
 	@RequestMapping("/loginPasswordAutoChange")
-	public void loginPasswordAutoChange(HttpServletRequest request)
+	public void loginPasswordAutoChange(@NotNull HttpServletRequest request)
 	{
 		String newPassword = RandomStringUtils.random(8, 
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_+=<>?/");
@@ -383,7 +368,7 @@ public class MainController
 		} 
 		catch(MessagingException e) 
 		{
-			e.printStackTrace();
+			log.error("Failed to send email to {}: {}", username, e.getMessage());
 		}	
 	}
 	
@@ -406,7 +391,8 @@ public class MainController
         return "viewPasswords";
 	}
 	
-	public ResponseEntity<String> viewSavedPasswordsFallback(Model model, HttpServletRequest request, 
+	public ResponseEntity<String> viewSavedPasswordsFallback(Model model,
+															 HttpServletRequest request,
 			                                                 Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
@@ -416,7 +402,6 @@ public class MainController
 	@KafkaListener(topics = "view-deleted-passwords-event", groupId = "user-group")
 	public void viewDeletedPasswords(String user)
 	{
-		String username = user;
 		List<Password> userDeletedPasswords = new ArrayList<Password>();
 	}
 		
@@ -430,7 +415,7 @@ public class MainController
 		
 		catch(Exception e)
 		{
-			System.out.println("Error in restoring password: " + e.getMessage());
+			log.error("Error in restoring password: {}", e.getMessage());
 		}
 	}
 	
@@ -445,7 +430,7 @@ public class MainController
 	    boolean success = false;
 	    Exception lastException = null;
 
-	    while(retryCount <= maxRetries && !success) 
+	    while(!success)
 	    {
 	        try 
 	        {
@@ -469,10 +454,11 @@ public class MainController
 	    		try 
 	    		{
 	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		} 
+	    		}
+
 	    		catch(MessagingException e) 
 	    		{
-	    			e.printStackTrace();
+	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(0), e.getMessage());
 	    		}
 	    		
 	            success = true; 
@@ -522,7 +508,7 @@ public class MainController
 	    boolean success = false;
 	    Exception lastException = null;
 
-	    while(retryCount <= maxRetries && !success) 
+	    while(!success)
 	    {
 	        try 
 	        {
@@ -546,10 +532,11 @@ public class MainController
 	    		try 
 	    		{
 	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		} 
+	    		}
+
 	    		catch(MessagingException e) 
 	    		{
-	    			e.printStackTrace();
+	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(1), e.getMessage());
 	    		}
 	                  
 	            success = true;      
@@ -569,14 +556,12 @@ public class MainController
 	    
 	    if(success) 
 	    {
-	        log.info("Successfull after {} attempts, execution: {}", 
-	                retryCount, executionID);
+	        log.info("Successfull after {} attempts, execution: {}", retryCount, executionID);
 	    } 
 	    
 	    else 
 	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
+	        log.error("Failed after {} attempts, execution: {}, error: {}", retryCount, executionID, lastException.getMessage());
 	    }
 	}
 	
@@ -588,8 +573,10 @@ public class MainController
 	
 	@PostMapping("/userLogin")
 	@CircuitBreaker(name = "userLoginCB", fallbackMethod = "userLoginFallback")
-	public String userLogin(@ModelAttribute User userLoginFormData, HttpServletRequest request, 
-			                HttpServletResponse response, @RequestParam("otp") String otp)
+	public String userLogin(@NotNull @ModelAttribute User userLoginFormData,
+							@NotNull HttpServletRequest request,
+							HttpServletResponse response,
+							@NotNull @RequestParam("otp") String otp)
 	{
 		String userReq = userLoginFormData.getUsername();
 		User u = userService.getUser(userReq);
@@ -649,7 +636,7 @@ public class MainController
 		} 
 		catch(MessagingException e)
 		{
-			e.printStackTrace();
+			log.error("Failed to send password reset email to {}: {}", username, e.getMessage());
 		}
 		
 		return "passwordResetUserNotifier";
@@ -718,7 +705,7 @@ public class MainController
 	    boolean success = false;
 	    Exception lastException = null;
 
-	    while(retryCount <= maxRetries && !success) 
+	    while(!success)
 	    {
 	        try 
 	        {
@@ -743,10 +730,11 @@ public class MainController
 	    		try 
 	    		{
 	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		} 
+	    		}
+
 	    		catch(MessagingException e) 
 	    		{
-	    			e.printStackTrace();
+	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(1), e.getMessage());
 	    		}
 	    		
 	            success = true;	            
@@ -766,14 +754,12 @@ public class MainController
 	    
 	    if(success) 
 	    {
-	        log.info("Successfull after {} attempts, execution: {}", 
-	                retryCount, executionID);
+	        log.info("Successfull after {} attempts, execution: {}", retryCount, executionID);
 	    } 
 	    
 	    else 
 	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
+	        log.error("Failed after {} attempts, execution: {}, error: {}", retryCount, executionID, lastException.getMessage());
 	    }	
 	}
 	
@@ -787,10 +773,9 @@ public class MainController
 	public String userVaultOTPAuth(HttpServletRequest request, @RequestParam("vOTP") String otp)
 			                       
 	{
-		String inputOTP = otp;
-		String sentOTP = (String) request.getSession().getAttribute("VaultOTP");
+        String sentOTP = (String) request.getSession().getAttribute("VaultOTP");
 		
-		if(inputOTP.equals(sentOTP))
+		if(otp.equals(sentOTP))
 		{
 			return "mainPage";
 		}
@@ -811,8 +796,9 @@ public class MainController
 		{
 			isPasswordFound = aiService.isPasswordPwned(password);
 			passwordAnalysis = aiService.analyzePasswordWithAI(password);
-		} 
-		catch(Exception e) {e.printStackTrace();}
+		}
+
+		catch(Exception e) {log.error("Error analyzing password: {}", e.getMessage());}
 		
 		if(isPasswordFound)
 		{

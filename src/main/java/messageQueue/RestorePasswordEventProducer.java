@@ -1,22 +1,23 @@
 package messageQueue;
 
+import com.example.PVault.entityClasses.Password;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.PVault.entityClasses.Password;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 @RestController
 @RequestMapping("/queue")
 public class RestorePasswordEventProducer 
 {
-	 @Autowired
+	private static final Logger log = LoggerFactory.getLogger(RestorePasswordEventProducer.class);
+	@Autowired
 	 private KafkaTemplate<String, Password> kafkaTemplate;
 	    
 
@@ -29,12 +30,11 @@ public class RestorePasswordEventProducer
 		     Password password = mapper.readValue(passwordJson, Password.class);
 		      
 		     kafkaTemplate.send("restore-password-event", password);
-		     //System.out.println("User password sent to Kafka: " + password);
 		 } 
 		 
-		 catch(Exception e) 
+		 catch(Exception e)
 		 {
-			 e.printStackTrace();
+			 log.error(e.getMessage());
 		 }
 	 }
 }

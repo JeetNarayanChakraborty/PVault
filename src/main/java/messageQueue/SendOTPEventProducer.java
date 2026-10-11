@@ -1,7 +1,6 @@
 package messageQueue;
 
-import java.util.ArrayList;
-import java.util.UUID;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,8 +8,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletRequest;
 import security.OTPService;
+
+import java.util.ArrayList;
+import java.util.UUID;
 
 
 @RestController
@@ -36,7 +37,7 @@ public class SendOTPEventProducer
 	    boolean success = false;
 	    Exception lastException = null;
 
-	    while(retryCount <= maxRetries && !success) 
+	    while(!success)
 	    {
 	        try 
 	        {
@@ -80,16 +81,10 @@ public class SendOTPEventProducer
 	        }
 	    }
 	    
-	    if(success) 
-	    {
-	        log.info("Successfully after {} attempts, execution: {}", 
-	                retryCount, executionID);
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
-	    }
+	    if(success) log.info("Successfully after {} attempts, execution: {}",
+				              retryCount, executionID);
+
+	    else log.error("Failed after {} attempts, execution: {}, error: {}",
+				        retryCount, executionID, lastException.getMessage());
 	}
 }

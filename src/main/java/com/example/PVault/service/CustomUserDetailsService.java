@@ -13,17 +13,14 @@ public class CustomUserDetailsService implements UserDetailsService
 {
     private final UserService userService;
 
-    public CustomUserDetailsService(UserService userService) 
-    {
-        this.userService = userService;
-    }
+    public CustomUserDetailsService(UserService userService) { this.userService = userService; }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException 
     {
     	com.example.PVault.entityClasses.User user = userService.getUser(username);
 
-        if (user == null) 
+        if(user == null)
         {
             throw new UsernameNotFoundException("User not found with username: " + username);
         }

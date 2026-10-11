@@ -14,21 +14,15 @@ public class MailService
 	private final JavaMailSender mailSender;
 	
 	@Autowired
-    public MailService(JavaMailSender mailSender)
-    {
-    	this.mailSender = mailSender;
-    }
+    public MailService(JavaMailSender mailSender) { this.mailSender = mailSender;}
 	
 	public void sendEmail(String toEmail, String mailSubject, String mailBody) throws MessagingException 
     {
-        String subject = mailSubject;
-        String body = mailBody;
-   
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         helper.setTo(toEmail);
-        helper.setSubject(subject);
-        helper.setText(body);
+        helper.setSubject(mailSubject);
+        helper.setText(mailBody);
         mailSender.send(message);
     }
 }

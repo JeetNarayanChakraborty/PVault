@@ -1,5 +1,14 @@
 package com.example.PVault.service;
 
+import com.example.PVault.entityClasses.Password;
+import com.example.PVault.entityClasses.User;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -8,25 +17,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import com.example.PVault.entityClasses.Password;
-import com.example.PVault.entityClasses.User;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.mail.MessagingException;
-import com.example.PVault.service.Encryptor;
 
 
 
@@ -62,7 +53,7 @@ public class BackupAndRestoreService
 	public void backupUserSavedPasswords(String username) throws InvalidKeyException, IllegalBlockSizeException, 
 																 BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException
 	{
-		SecretKey secretKey = null;
+		SecretKey secretKey;
 		
 		String masterkey = keyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
 		
@@ -72,13 +63,12 @@ public class BackupAndRestoreService
 	
 		List<Object[]> res = passwordService.getWebsiteAndPassword(username);
 		HashMap<String, pwd> pwdDetails = new HashMap<String, pwd>();
-		
-		for(int i=0; i<res.size(); i++)
+
+        for(Object[] row : res)
 		{
-			Object[] row = res.get(i);
-			pwd temppwd = new pwd((String) row[1], (String) row[2]);
-			pwdDetails.put((String) row[0], temppwd);
-		}
+            pwd temppwd = new pwd((String) row[1], (String) row[2]);
+            pwdDetails.put((String) row[0], temppwd);
+        }
 		
 		String encryptedData = null;
 		
@@ -86,7 +76,7 @@ public class BackupAndRestoreService
 		{
 			encryptedData = encryptMap(pwdDetails, secretKey);
 		} 
-		catch (Exception e) {}
+		catch(Exception ignored) {}
         
         User user = userService.getUser(username);
         
@@ -111,7 +101,7 @@ public class BackupAndRestoreService
 		ArrayList<String> userCurrentPasswordIDs = new ArrayList<String>(); // Stores user's current password Ids
 		List<Password> userDeletedPasswords = new ArrayList<Password>(); // Stores the end result of the deleted user passwords
 		
-		SecretKey secretKey = null;
+		SecretKey secretKey;
 		User u = userService.getUser(username);
 		String masterkey = keyManagementService.getUserMasterKey(username);  // Get Master Key for encryption and backup
 		
@@ -146,20 +136,17 @@ public class BackupAndRestoreService
         
         for(String ID : userCurrentPasswordIDs)
         {
-        	if(allLastSevenWeeksUserPasswords.containsKey(ID)) // Compares user's current passwords with all past seven weeks passwords
-        	{
-        		allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all-password store, those who remains were deleted before
-        	}
+            // Compares user's current passwords with all past seven weeks passwords
+            allLastSevenWeeksUserPasswords.remove(ID);   // Deletes matched passwords from the all-password store, those who remains were deleted before
         }
            
         for(Entry<String, pwd> map : allLastSevenWeeksUserPasswords.entrySet()) 
     	{
             String passwordID = map.getKey();
-            String user = username;
             String websiteName = map.getValue().getWebsiteName();
             String password = map.getValue().getPassword();
             
-            Password restoredPassword = new Password(passwordID, user, websiteName, password); // again create a password object from restored password
+            Password restoredPassword = new Password(passwordID, username, websiteName, password); // again create a password object from restored password
             
             userDeletedPasswords.add(restoredPassword); // Add to the list of deleted passwords
     	}
@@ -194,10 +181,7 @@ class pwd
 	String websiteName;
 	String Password;
 	
-	public pwd() 
-	{
-        // Empty default constructor needed for Jackson deserialization
-    }
+	public pwd() {}
 	
 	public pwd(String websiteName, String Password)
 	{
@@ -205,22 +189,13 @@ class pwd
 		this.Password = Password;
 	}
 	
-	public String getWebsiteName() 
-	{
-		return websiteName;
-	}
-	public void setWebsiteName(String websiteName) 
-	{
-		this.websiteName = websiteName;
-	}
-	public String getPassword() 
-	{
-		return Password;
-	}
-	public void setPassword(String password) 
-	{
-		Password = password;
-	}
+	public String getWebsiteName() { return websiteName; }
+
+	public void setWebsiteName(String websiteName) { this.websiteName = websiteName; }
+
+	public String getPassword() { return Password; }
+
+	public void setPassword(String password) { Password = password; }
 }
 
 
