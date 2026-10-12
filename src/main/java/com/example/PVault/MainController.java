@@ -5,6 +5,7 @@ import com.example.PVault.entityClasses.User;
 import com.example.PVault.entityClasses.formDetails;
 import com.example.PVault.service.*;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -102,52 +103,28 @@ public class MainController
 	}
 	
 	@GetMapping("/getHomeAfterSessionInvalidation")
-	public String getHomeAfterSessionInvalidation()
-	{
-		return "homePage";
-	}
+	public String getHomeAfterSessionInvalidation() { return "homePage"; }
 	
 	@GetMapping("/getRegistration")
-	public String getRegistration()
-	{
-		return "registration";
-	}
-	
+	public String getRegistration() { return "registration"; }
+
 	@GetMapping("/getAddPassword")
-	public String getAddPassword()
-	{
-		return "addPassword";
-	}
-	
+	public String getAddPassword() { return "addPassword"; }
+
 	@GetMapping("/getMainPage")
-	public String getMainPage()
-	{
-		return "mainPage";
-	}
+	public String getMainPage() { return "mainPage"; }
 	
 	@GetMapping("/getContact")
-	public String getContact()
-	{
-		return "contact";
-	}
+	public String getContact() { return "contact"; }
 	
 	@GetMapping("/getAboutDeveloper")
-	public String getAboutDeveloper()
-	{
-		return "aboutMe";
-	}
+	public String getAboutDeveloper() { return "aboutMe"; }
 	
 	@GetMapping("/getPasswordChangeForm")
-	public String getPasswordChangeForm()
-	{
-		return "passwordChangeForm";
-	}
+	public String getPasswordChangeForm() { return "passwordChangeForm"; }
 	
 	@GetMapping("/takeUsername")
-	public String takeUsername()
-	{
-		return "takeUsername";
-	}
+	public String takeUsername() { return "takeUsername"; }
 	
 	@PostMapping("/decryptPassword")
 	@ResponseBody
@@ -311,7 +288,8 @@ public class MainController
 		request.getSession().setAttribute("ID", Id);
 		return "editPassword";
 	}
-	
+
+	@Retry(name = "ret_editWebsitePassword")
 	@PostMapping("/editWebsitePassword")
 	@CircuitBreaker(name = "editWebsitePasswordCB", fallbackMethod = "editWebsitePasswordFallback")
 	public String editWebsitePassword(@ModelAttribute Password passwordDetails, HttpServletRequest request)
@@ -371,7 +349,8 @@ public class MainController
 			log.error("Failed to send email to {}: {}", username, e.getMessage());
 		}	
 	}
-	
+
+	@Retry(name = "ret_viewSavedPasswords")
 	@GetMapping("/viewSavedPasswords")
 	@CircuitBreaker(name = "viewSavedPasswordsCB", fallbackMethod = "viewSavedPasswordsFallback")
 	public String viewSavedPasswords(Model model, HttpServletRequest request)
@@ -398,7 +377,7 @@ public class MainController
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");
 	}
-	
+
 	@KafkaListener(topics = "view-deleted-passwords-event", groupId = "user-group")
 	public void viewDeletedPasswords(String user)
 	{
@@ -418,76 +397,19 @@ public class MainController
 			log.error("Error in restoring password: {}", e.getMessage());
 		}
 	}
-	
+
+	@Retry(name = "ret_sendOTP")
 	@CircuitBreaker(name = "sendOTPCB", fallbackMethod = "sendOTPFallback")
 	@KafkaListener(topics = "send-otp-event", groupId = "user-group")
-	public String emailOTP(ArrayList<String> emailDetails)
+	public String emailOTP(ArrayList<String> emailDetails) throws MessagingException
 	{
-		String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
-	    boolean success = false;
-	    Exception lastException = null;
+		String toEmail = emailDetails.get(0);
+		String userOTP = emailDetails.get(1);
 
-	    while(!success)
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                }
-	            }
-	            
-	            String toEmail = emailDetails.get(0);
-	    		String userOTP = emailDetails.get(1);
-	    		
-	    		try 
-	    		{
-	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		}
+		otpService.sendOTPEmail(toEmail, userOTP);
 
-	    		catch(MessagingException e) 
-	    		{
-	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(0), e.getMessage());
-	    		}
-	    		
-	            success = true; 
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) 
-	    {
-	        log.info("Successfully saved password after {} attempts, execution: {}", 
-	                retryCount, executionID);
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed to save password after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
-	    }
-	    
+		log.info("Successfully sent OTP to: {}", toEmail);
+
 		return "homePage";
 	}
 	
@@ -496,75 +418,19 @@ public class MainController
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
 	    		body("Service is temporarily unavailable. Please try again later.");
 	}
-	
+
 	@CircuitBreaker(name = "sendUserLoginOTPCB", fallbackMethod = "sendUserLoginOTPFallback")
 	@KafkaListener(topics = "send-user-login-otp-event", groupId = "user-group")
-	public void sendUserLoginOTP(ArrayList<String> emailDetails)
-	{	
-		String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
-	    boolean success = false;
-	    Exception lastException = null;
+	public void sendUserLoginOTP(ArrayList<String> emailDetails) throws Exception
+	{
+		String userOTP = emailDetails.get(0);
+		String toEmail = emailDetails.get(1);
 
-	    while(!success)
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                }
-	            }	            
+		otpService.sendOTPEmail(toEmail, userOTP);
 
-	    		String userOTP = emailDetails.get(0);
-	    		String toEmail = emailDetails.get(1);
-	    	
-	    		try 
-	    		{
-	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		}
-
-	    		catch(MessagingException e) 
-	    		{
-	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(1), e.getMessage());
-	    		}
-	                  
-	            success = true;      
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) 
-	    {
-	        log.info("Successfull after {} attempts, execution: {}", retryCount, executionID);
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", retryCount, executionID, lastException.getMessage());
-	    }
+		log.info("Login OTP successfully sent to user: {}", toEmail);
 	}
-	
+
 	public ResponseEntity<String> sendUserLoginOTPFallback(ArrayList<String> emailDetails, Throwable t) 
 	{
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
@@ -584,9 +450,8 @@ public class MainController
 		String inputPassword = userLoginFormData.getPassword();
 		String storedPassword = u.getPassword();
 		String sentOTP = (String) request.getSession().getAttribute("OTP");
-		String enteredOTP = otp;
-		
-		if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(enteredOTP))
+
+        if(authService.authenticate(inputPassword, storedPassword) && sentOTP.equals(otp))
 		{
 			request.getSession().setAttribute("username", userReq);
 			
@@ -633,7 +498,8 @@ public class MainController
 		try 
 		{
 			mailService.sendEmail(username, mailSubject, mailBody);
-		} 
+		}
+
 		catch(MessagingException e)
 		{
 			log.error("Failed to send password reset email to {}: {}", username, e.getMessage());
@@ -641,7 +507,9 @@ public class MainController
 		
 		return "passwordResetUserNotifier";
 	}
-	
+
+	@Retry(name = "ret_passwordChange")
+	@CircuitBreaker(name = "passwordChangeCB", fallbackMethod = "passwordChangeFallback")
 	@PostMapping("/passwordChange")
 	public String passwordChange(@RequestParam("newPassword") String newPassword, HttpServletRequest request, Model model)
 	{
@@ -656,8 +524,7 @@ public class MainController
 			userService.addUser(user);
 			
 			userService.updatePasswordHistory(user.getId());
-			
-			
+
 			String mailSubject = "Password change for PVault";
 			String mailBody = "Your Password have been successfully updated\n"
 					        + "Your new password: " + newPassword;
@@ -665,10 +532,11 @@ public class MainController
 			try 
 			{
 				mailService.sendEmail(username, mailSubject, mailBody);
-			} 
+			}
+
 			catch(MessagingException e) 
 			{
-				e.printStackTrace();
+				log.info(e.getMessage());
 			}
 			
 			return "homePage";
@@ -679,6 +547,16 @@ public class MainController
 			 model.addAttribute("errorMessage", "Password change failed: new password is same as the old password.");
 		     return "passwordChangeForm";
 		}
+	}
+
+	public ResponseEntity<String> passwordChangeFallback(@RequestParam("newPassword") String newPassword,
+										 HttpServletRequest request, Model model, Throwable t)
+	{
+		log.error("Password change failed for user: {}. Circuit Breaker active. Error: {}",
+				   request.getSession().getAttribute("username"), t.getMessage());
+
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).
+				              body("Service is temporarily unavailable.");
 	}
 
 	@RequestMapping("/userLogout")
@@ -693,76 +571,28 @@ public class MainController
 	    
 	    return "homePage";		
 	}
-	
+
 	@CircuitBreaker(name = "sendUserVaultOTPCB", fallbackMethod = "sendUserVaultOTPFallback") //Circuit breaker
 	@KafkaListener(topics = "send-user-vault-otp-event", groupId = "user-group")
 	public void sendUserVaultOTP(ArrayList<String> emailDetails)
 	{
 		String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {1000, 2000, 4000}; // Backoff times in milliseconds
-	    boolean success = false;
-	    Exception lastException = null;
 
-	    while(!success)
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                // Wait before retry
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                }
-	            }
-	            
-	            String userOTP = emailDetails.get(0);
-	    		String toEmail = emailDetails.get(1);
-	    	
-	    		try 
-	    		{
-	    			otpService.sendOTPEmail(toEmail, userOTP);
-	    		}
+		try
+		{
+			String userOTP = emailDetails.get(0);
+			String toEmail = emailDetails.get(1);
 
-	    		catch(MessagingException e) 
-	    		{
-	    			log.error("Error sending OTP email to {}: {}", emailDetails.get(1), e.getMessage());
-	    		}
-	    		
-	            success = true;	            
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) 
-	    {
-	        log.info("Successfull after {} attempts, execution: {}", retryCount, executionID);
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", retryCount, executionID, lastException.getMessage());
-	    }	
+			otpService.sendOTPEmail(toEmail, userOTP);
+		}
+
+		catch(Exception e)
+		{
+			log.error("Failed : error: {}", e.getMessage());
+		}
 	}
-	
+
+
 	public ResponseEntity<String> sendUserVaultOTPFallback(ArrayList<String> emailDetails, Throwable t) 
 	{
 	    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).

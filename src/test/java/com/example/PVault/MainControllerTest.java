@@ -245,8 +245,7 @@ public class MainControllerTest
     }
 
     @Test
-    public void testEmailOTP() 
-    {
+    public void testEmailOTP() throws MessagingException {
         ArrayList<String> emailDetails = new ArrayList<>();
         emailDetails.add("user@example.com");
         emailDetails.add("123456");
@@ -262,12 +261,13 @@ public class MainControllerTest
     }
 
     @Test
-    public void testSendUserLoginOTP() 
+    public void testSendUserLoginOTP() throws Exception
     {
         ArrayList<String> emailDetails = new ArrayList<>();
         emailDetails.add("123456");
         emailDetails.add("user@example.com");
         mainController.sendUserLoginOTP(emailDetails);
+
         try 
         {
             verify(otpService, times(1)).sendOTPEmail("user@example.com", "123456");

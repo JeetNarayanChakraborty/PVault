@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 import security.OTPService;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 
 @RestController
@@ -30,61 +29,14 @@ public class SendOTPEventProducer
 	@PostMapping("/sendOTP")
 	public void publishSendOTPEvent(HttpServletRequest request) 
 	{
-		String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {100, 200, 400}; // Minimal Backoff times in milliseconds to increase user experience
-	    boolean success = false;
-	    Exception lastException = null;
+		String userOTP = otpService.generateOTP();
+		request.getSession().setAttribute("OTP", userOTP);
+		String toEmail = (String) request.getSession().getAttribute("username");
 
-	    while(!success)
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                // Wait before retry
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                }
-	            }
-	            
-	            String userOTP = otpService.generateOTP();
-	    		request.getSession().setAttribute("OTP", userOTP);
-	    		String toEmail = (String) request.getSession().getAttribute("username");
-	    		
-	    		ArrayList<String> emailList = new ArrayList<>();
-	    		emailList.add(toEmail);
-	    		emailList.add(userOTP);
-	    		
-	    		kafkaTemplate.send("send-otp-event", emailList);
-	    		
-	            success = true;	            
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) log.info("Successfully after {} attempts, execution: {}",
-				              retryCount, executionID);
+		ArrayList<String> emailList = new ArrayList<>();
+		emailList.add(toEmail);
+		emailList.add(userOTP);
 
-	    else log.error("Failed after {} attempts, execution: {}, error: {}",
-				        retryCount, executionID, lastException.getMessage());
+		kafkaTemplate.send("send-otp-event", emailList);
 	}
 }

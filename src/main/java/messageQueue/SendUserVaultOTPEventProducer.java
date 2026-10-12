@@ -1,7 +1,6 @@
 package messageQueue;
 
-import java.util.ArrayList;
-import java.util.UUID;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +8,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import security.OTPService;
+
+import java.util.ArrayList;
 
 
 @Controller
@@ -24,75 +24,38 @@ public class SendUserVaultOTPEventProducer
 	@Autowired
 	OTPService otpService;
 	
-	private final Logger log = LoggerFactory.getLogger(SendOTPEventProducer.class);
-	
-	
-	@GetMapping("/sendUserVaultOTP")
-	public String publishRestorePasswordEvent(HttpServletRequest request) 
-	{
-		String executionID = UUID.randomUUID().toString();
-	    int maxRetries = 3;
-	    int retryCount = 0;
-	    int[] backoffTimes = {100, 200, 400}; // Minimal Backoff times in milliseconds to increase user experience
-	    boolean success = false;
-	    Exception lastException = null;
+	private final Logger log = LoggerFactory.getLogger(SendUserVaultOTPEventProducer.class);
 
-	    while(retryCount <= maxRetries && !success) 
-	    {
-	        try 
-	        {
-	            if(retryCount > 0) 
-	            {
-	                try 
-	                {
-	                    Thread.sleep(backoffTimes[retryCount - 1]);
-	                    
-	                } 
-	                
-	                catch(InterruptedException ie) 
-	                {
-	                    Thread.currentThread().interrupt();
-	                }
-	            }
-	            
-	            String userOTP = otpService.generateOTP();
-	    		String toEmail = (String) request.getSession().getAttribute("username");
-	    		request.getSession().setAttribute("VaultOTP", userOTP);
-	    		
-	    		ArrayList<String> mailList = new ArrayList<>();
-	    		mailList.add(userOTP);
-	    		mailList.add(toEmail);
-	    		
-	    		kafkaTemplate.send("send-user-vault-otp-event", mailList);
-	    		
-	            success = true;	            
-	        } 
-	        
-	        catch(Exception e) 
-	        {
-	            retryCount++;
-	            lastException = e;
-	            
-	            if(retryCount > maxRetries) 
-	            {
-	                break;
-	            }
-	        }
-	    }
-	    
-	    if(success) 
-	    {
-	        log.info("Successfull after {} attempts, execution: {}", 
-	                retryCount, executionID);
-	        return "vaultOTP";
-	    } 
-	    
-	    else 
-	    {
-	        log.error("Failed after {} attempts, execution: {}, error: {}", 
-	                 retryCount, executionID, lastException.getMessage());
-	        return "vaultOTP";
-	    }
+
+	@GetMapping("/sendUserVaultOTP")
+	public String publishRestorePasswordEvent(HttpServletRequest request,
+											  RedirectAttributes redirectAttrs)
+	{
+		String username = (String) request.getSession().getAttribute("username");
+
+		try
+		{
+			String userOTP = otpService.generateOTP();
+			request.getSession().setAttribute("VaultOTP", userOTP);
+
+			ArrayList<String> mailList = new ArrayList<>();
+			mailList.add(userOTP);
+			mailList.add(username);
+
+			kafkaTemplate.send("send-user-vault-otp-event", mailList);
+
+			log.info("Successfully generated Vault OTP and published event for user: {}", username);
+
+			return "vaultOTP";
+		}
+
+		catch(Exception e)
+		{
+			log.error("Fatal error processing Vault OTP request for user: {}. Error: {}", username, e.getMessage());
+
+			redirectAttrs.addFlashAttribute("error", "Could not send OTP, please try again.");
+			return "redirect:/vaultOTP";
+		}
 	}
 }
 

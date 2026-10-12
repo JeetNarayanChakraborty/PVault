@@ -1,7 +1,6 @@
 package security;
 
-import javax.sql.DataSource;
-
+import com.example.PVault.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,7 +14,7 @@ import org.springframework.security.web.authentication.rememberme.JdbcTokenRepos
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
-import com.example.PVault.service.CustomUserDetailsService;
+import javax.sql.DataSource;
 
 
 
@@ -25,20 +24,17 @@ public class SecurityConfig
 {
 	private final DataSource dataSource;
 	private final CustomUserDetailsService customUserDetailsService;
-    
-	
-	public SecurityConfig(DataSource dataSource, CustomUserDetailsService customUserDetailsService) 
+
+	public SecurityConfig(DataSource dataSource,
+                          CustomUserDetailsService customUserDetailsService)
 	{
         this.dataSource = dataSource;
         this.customUserDetailsService = customUserDetailsService;
     }
 	
     @Bean
-    public PasswordEncoder passwordEncoder() 
-    {
-        return new BCryptPasswordEncoder();
-    }
-    
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+
     @Bean
     public PersistentTokenRepository persistentTokenRepository() 
     {
@@ -51,7 +47,6 @@ public class SecurityConfig
     public PersistentTokenBasedRememberMeServices rememberMeServices(
             UserDetailsService userDetailsService) 
     {
-
         PersistentTokenBasedRememberMeServices rememberMeServices =
             new PersistentTokenBasedRememberMeServices(
                 "remember-me",

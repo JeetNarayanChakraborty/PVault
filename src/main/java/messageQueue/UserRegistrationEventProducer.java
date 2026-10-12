@@ -1,26 +1,23 @@
 package messageQueue;
 
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.UUID;
-
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-
+import com.example.PVault.entityClasses.User;
+import com.example.PVault.entityClasses.formDetails;
+import com.example.PVault.service.passwordService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import com.example.PVault.entityClasses.User;
-import com.example.PVault.entityClasses.formDetails;
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import com.example.PVault.service.passwordService;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.UUID;
 
 
 @Controller
@@ -48,7 +45,9 @@ public class UserRegistrationEventProducer
 		try 
 		{
 			keyGen = KeyGenerator.getInstance("AES");
-		} catch(NoSuchAlgorithmException e) { e.printStackTrace();}
+		}
+
+        catch(NoSuchAlgorithmException e) { e.printStackTrace();}
 		
         keyGen.init(256);
         SecretKey secretKey = keyGen.generateKey();          //Create AES key to encrypt master key
